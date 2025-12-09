@@ -11,13 +11,14 @@ export default function CheckLight({ heaterOn, fanOn, timerSet, valveOpen }) {
 
 
       {/* Timer Icon */}
-      <Tooltip title={timerSet ? "Timer set" : "No timer set"}>
+      {/* TODO: riabilitare quando verrà implementata la funzione del timer */}
+      {/* <Tooltip title={timerSet ? "Timer set" : "No timer set"}>
         {timerSet ? (
           <AlarmIcon fontSize="medium" sx={{ color: '#009688', marginRight: 2 }} />
         ) : (
           <AlarmOffIcon fontSize="medium" sx={{ color: '#cccccc', marginRight: 2 }} />
         )}
-      </Tooltip>
+      </Tooltip> */}
 
       {/* Heater Icon */}
       <Tooltip title={heaterOn ? "Heater ON" : "Heater OFF"}>
