@@ -24,10 +24,10 @@ app.add_middleware(
 # ---------------------------
 # 🧩 ROUTER SETUP
 # ---------------------------
-app.include_router(dryer.router, prefix="/dryer", tags=["Dryer"])
-app.include_router(network.router, prefix="/network", tags=["Network"])
-app.include_router(update.router, prefix="/update", tags=["Update"])
-app.include_router(config.router, prefix="/config", tags=["Config"])
+app.include_router(dryer.router, prefix="/api/dryer", tags=["Dryer"])
+app.include_router(network.router, prefix="/api/network", tags=["Network"])
+app.include_router(update.router, prefix="/api/update", tags=["Update"])
+app.include_router(config.router, prefix="/api/config", tags=["Config"])
 
 # ---------------------------
 # ⚙️ BACKGROUND LOOP (dryer)

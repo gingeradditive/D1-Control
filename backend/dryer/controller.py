@@ -278,7 +278,7 @@ class DryerController:
     def update_setpoint(self, new_temp):
         self.set_temp = new_temp
         self.tolerance = new_temp * 0.01
-        self.config.set_config_param("setpoint", new_temp)
+        self.config.set("setpoint", new_temp)
         print(f"Setpoint aggiornato a {new_temp}°C")
 
     def update_fan_cooldown(self):
