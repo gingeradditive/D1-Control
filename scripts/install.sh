@@ -160,7 +160,7 @@ xset s off
 xset -dpms
 xset s noblank
 unclutter -idle 0 &
-chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost:3000/?kiosk=true &
+chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost/?kiosk=true &
 EOF
 chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
 
@@ -168,5 +168,60 @@ echo "🔌 Installo e abilito pigpio daemon..."
 sudo apt-get install -y pigpio
 sudo systemctl enable pigpiod.service
 sudo systemctl start pigpiod.service
+
+echo "🌐 Installo Nginx..."
+sudo apt-get install -y nginx
+
+echo "🛠️ Configuro Nginx come reverse proxy..."
+
+NGINX_CONF="/etc/nginx/sites-available/dryer"
+
+sudo tee $NGINX_CONF > /dev/null <<EOF
+server {
+    listen 80;
+    server_name _;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Backend
+    location /api/ {
+        proxy_pass http://localhost:8000/api/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+    }
+
+    # Gestione WebSocket (FastAPI/uvicorn)
+    location /ws/ {
+        proxy_pass http://localhost:8000/ws/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # Compressione
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript application/xml;
+    gzip_min_length 256;
+}
+EOF
+
+sudo ln -sf $NGINX_CONF /etc/nginx/sites-enabled/dryer
+sudo rm -f /etc/nginx/sites-enabled/default
+
+echo "🔁 Riavvio Nginx..."
+sudo systemctl restart nginx
+sudo systemctl enable nginx
 
 echo "✅ Installazione completata — sistema kiosk pronto al riavvio!"
