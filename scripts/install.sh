@@ -29,7 +29,6 @@ sudo apt-get install --no-install-recommends -y \
     xterm \
     python3-venv \
     python3-pip \
-    npm \
     git \
     curl
 
@@ -45,7 +44,8 @@ user-session=openbox
 EOF
 
 echo "📦 Aggiorno Node..."
-sudo apt-get remove -y nodejs || true
+sudo apt-get purge -y nodejs npm || true 
+sudo apt-get autoremove -y || true
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
