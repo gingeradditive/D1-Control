@@ -17,19 +17,31 @@ x11-xserver-utils \
 xinit \
 openbox \
 lightdm \
+lightdm-gtk-greeter \
 unclutter \
 chromium-browser \
 python3-venv \
 python3-pip \
 npm \
 git \
-curl
+curl \
+accountsservice
 
 # Imposta LightDM per login automatico in grafica
 echo "🖥️ Configuro LightDM per login automatico..."
-LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 sudo mkdir -p /etc/lightdm
-sudo tee "$LIGHTDM_CONF" > /dev/null <<EOF
+
+# File principale lightdm.conf (come nel tuo script)
+sudo tee /etc/lightdm/lightdm.conf > /dev/null <<EOF
+[Seat:*]
+autologin-user=$USERNAME
+autologin-user-timeout=0
+user-session=openbox
+EOF
+
+# File aggiuntivo richiesto (lightdm.conf.d)
+sudo mkdir -p /etc/lightdm/lightdm.conf.d
+sudo tee /etc/lightdm/lightdm.conf.d/50-autologin.conf >/dev/null <<EOF
 [Seat:*]
 autologin-user=$USERNAME
 autologin-user-timeout=0
@@ -48,31 +60,31 @@ source venv/bin/activate
 echo "📦 Installo dipendenze Python da requirements.txt..."
 pip install --upgrade pip
 if [ -f "requirements.txt" ]; then
-echo "📦 Tentativo 1: installazione da piwheels + pypi"
-if ! pip install -r requirements.txt --default-timeout=100; then
-echo "⚠️ Ritento (2/3) usando solo PyPI..."
-if ! pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100; then
-echo "⚠️ Ritento (3/3) con DNS Google..."
-echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null || true
-pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100
-fi
-fi
+    echo "📦 Tentativo 1: installazione da piwheels + pypi"
+    if ! pip install -r requirements.txt --default-timeout=100; then
+        echo "⚠️ Ritento (2/3) usando solo PyPI..."
+        if ! pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100; then
+            echo "⚠️ Ritento (3/3) con DNS Google..."
+            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null || true
+            pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100
+        fi
+    fi
 else
-echo "⚠️ Nessun requirements.txt trovato, salto installazione pacchetti Python."
+    echo "⚠️ Nessun requirements.txt trovato, salto installazione pacchetti Python."
 fi
 
 echo "📦 Installo dipendenze npm per il frontend..."
 if [ -d "$PROJECT_DIR/frontend" ]; then
-cd "$PROJECT_DIR/frontend"
-npm install --no-audit --no-fund
-if npm run | grep -q "build"; then
-npm run build
+    cd "$PROJECT_DIR/frontend"
+    npm install --no-audit --no-fund
+    if npm run | grep -q "build"; then
+        npm run build
+    else
+        echo "⚠️ Nessuno script build trovato in package.json."
+    fi
+    cd "$PROJECT_DIR"
 else
-echo "⚠️ Nessuno script build trovato in package.json."
-fi
-cd "$PROJECT_DIR"
-else
-echo "⚠️ Cartella frontend non trovata, salto build."
+    echo "⚠️ Cartella frontend non trovata, salto build."
 fi
 
 echo "📦 Installo globalmente il server statico serve..."
@@ -164,6 +176,9 @@ chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost/?kio
 EOF
 chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
 
+# 👇 aggiunto: garantisce che autostart sia eseguibile
+sudo chmod +x /home/$USERNAME/.config/openbox/autostart
+
 echo "🔌 Installo e abilito pigpio daemon..."
 sudo apt-get install -y pigpio
 sudo systemctl enable pigpiod.service
@@ -181,28 +196,16 @@ server {
     listen 80;
     server_name _;
 
-    # Frontend
     location / {
         proxy_pass http://localhost:3000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    # Backend
     location /api/ {
         proxy_pass http://localhost:8000/api/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-
         proxy_read_timeout 300;
         proxy_connect_timeout 300;
     }
 
-    # Gestione WebSocket (FastAPI/uvicorn)
     location /ws/ {
         proxy_pass http://localhost:8000/ws/;
         proxy_http_version 1.1;
@@ -210,7 +213,6 @@ server {
         proxy_set_header Connection "upgrade";
     }
 
-    # Compressione
     gzip on;
     gzip_types text/plain text/css application/json application/javascript application/xml;
     gzip_min_length 256;
@@ -223,5 +225,12 @@ sudo rm -f /etc/nginx/sites-enabled/default
 echo "🔁 Riavvio Nginx..."
 sudo systemctl restart nginx
 sudo systemctl enable nginx
+
+echo "🖥️ Abilito LightDM & sessione grafica..."
+sudo systemctl enable lightdm
+sudo systemctl set-default graphical.target
+
+echo "🔁 Riavvio LightDM..."
+sudo systemctl restart lightdm
 
 echo "✅ Installazione completata — sistema kiosk pronto al riavvio!"
