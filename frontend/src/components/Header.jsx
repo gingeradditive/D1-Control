@@ -9,7 +9,7 @@ import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import AreaChartIcon from '@mui/icons-material/AreaChart';
-import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
+// import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
 
 import WifiDialog from './WifiDialog';
 import AlarmDialog from './AlarmDialog';
@@ -101,7 +101,7 @@ export default function Header() {
           <IconButton onClick={handleOpen('wifi')}>
             {getWifiIcon(network)}
           </IconButton>
-          <IconButton onClick={handleOpen('alarm')}><AccessAlarmIcon /></IconButton>
+          {/* <IconButton onClick={handleOpen('alarm')}><AccessAlarmIcon /></IconButton> */}
         </Box>
         <Box display="flex" alignItems="center">
           <IconButton onClick={handleOpen('chart')}><AreaChartIcon /></IconButton>
