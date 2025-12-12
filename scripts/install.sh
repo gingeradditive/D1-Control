@@ -31,6 +31,7 @@ sudo apt-get install --no-install-recommends -y \
     python3-pip \
     git \
     curl
+sudo apt-get install --no-install-recommends -y python3-pyxdg
 
 # Imposta LightDM per login automatico in grafica
 echo "🖥️ Configuro LightDM per login automatico..."
@@ -162,17 +163,42 @@ EOF
 sudo chmod 440 "$SUDOERS_FILE"
 
 echo "🧩 Configuro autostart di Openbox (kiosk)..."
-mkdir -p "$HOME_DIR/.config/openbox" # Usa la variabile HOME_DIR
-cat > "$HOME_DIR/.config/openbox/autostart" <<EOF
+# Usa $HOME_DIR se hai applicato la correzione dell'utente
+mkdir -p /home/$USERNAME/.config/openbox
+cat > /home/$USERNAME/.config/openbox/autostart <<EOF
+#!/bin/bash
+# ----------------------------------------------
+
+# 1. Attesa e Configurazione Base
+sleep 5
 xset s off
 xset -dpms
 xset s noblank
+
+# 2. Nasconde il cursore
 unclutter -idle 0 &
-# Prova con --no-sandbox se non funziona altrimenti
-chromium-browser --noerrdialogs --disable-infobars --kiosk --no-sandbox http://localhost/?kiosk=true &
+
+# 3. Avvia Chromium (con flag per Kiosk e minimale)
+/usr/bin/chromium-browser \
+    --display=:0 \
+    --noerrdialogs \
+    --disable-infobars \
+    --kiosk http://localhost/?kiosk=true \
+    --no-sandbox \
+    --disable-gpu \
+    --disable-software-rasterizer \
+    --enable-features=OverlayScrollbar \
+    --force-device-scale-factor=1 \
+    --ignore-gpu-blocklist \
+    &
+
+# ----------------------------------------------
 EOF
-# Modifica il chown per usare HOME_DIR
-sudo chown -R $USERNAME:$USERNAME "$HOME_DIR/.config"
+sudo chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
+
+# NUOVO COMANDO: Rende il file eseguibile
+echo "Permessi: Rendo autostart eseguibile..."
+sudo chmod +x /home/$USERNAME/.config/openbox/autostart
 
 echo "🔌 Installo e abilito pigpio daemon..."
 sudo apt-get install -y pigpio
