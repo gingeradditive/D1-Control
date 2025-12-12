@@ -6,7 +6,14 @@ export DEBIAN_FRONTEND=noninteractive
 echo "=== 🛠️ INSTALLAZIONE SISTEMA KIOSK ==="
 
 PROJECT_DIR=$(pwd)
-USERNAME=$(whoami)
+
+# Correzione: Ottiene l'utente non root anche se lo script è eseguito con sudo
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    USERNAME="$SUDO_USER"
+else
+    USERNAME=$(whoami)
+fi
+HOME_DIR="/home/$USERNAME" # Definisci la home directory
 
 echo "📦 Aggiorno sistema e installo pacchetti base..."
 sudo apt-get update -y
@@ -19,6 +26,7 @@ sudo apt-get install --no-install-recommends -y \
     lightdm \
     unclutter \
     chromium-browser \
+    xterm \
     python3-venv \
     python3-pip \
     npm \
@@ -154,15 +162,17 @@ EOF
 sudo chmod 440 "$SUDOERS_FILE"
 
 echo "🧩 Configuro autostart di Openbox (kiosk)..."
-mkdir -p /home/$USERNAME/.config/openbox
-cat > /home/$USERNAME/.config/openbox/autostart <<EOF
+mkdir -p "$HOME_DIR/.config/openbox" # Usa la variabile HOME_DIR
+cat > "$HOME_DIR/.config/openbox/autostart" <<EOF
 xset s off
 xset -dpms
 xset s noblank
 unclutter -idle 0 &
-chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost/?kiosk=true &
+# Prova con --no-sandbox se non funziona altrimenti
+chromium-browser --noerrdialogs --disable-infobars --kiosk --no-sandbox http://localhost/?kiosk=true &
 EOF
-chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
+# Modifica il chown per usare HOME_DIR
+sudo chown -R $USERNAME:$USERNAME "$HOME_DIR/.config"
 
 echo "🔌 Installo e abilito pigpio daemon..."
 sudo apt-get install -y pigpio
