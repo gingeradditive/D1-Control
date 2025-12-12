@@ -6,32 +6,24 @@ export DEBIAN_FRONTEND=noninteractive
 echo "=== 🛠️ INSTALLAZIONE SISTEMA KIOSK ==="
 
 PROJECT_DIR=$(pwd)
-
-# Correzione: Ottiene l'utente non root anche se lo script è eseguito con sudo
-if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
-    USERNAME="$SUDO_USER"
-else
-    USERNAME=$(whoami)
-fi
-HOME_DIR="/home/$USERNAME" # Definisci la home directory
+USERNAME=$(whoami)
 
 echo "📦 Aggiorno sistema e installo pacchetti base..."
 sudo apt-get update -y
 sudo apt-get upgrade -y
 sudo apt-get install --no-install-recommends -y \
-    xserver-xorg \
-    x11-xserver-utils \
-    xinit \
-    openbox \
-    lightdm \
-    unclutter \
-    chromium-browser \
-    xterm \
-    python3-venv \
-    python3-pip \
-    git \
-    curl
-sudo apt-get install --no-install-recommends -y python3-pyxdg
+xserver-xorg \
+x11-xserver-utils \
+xinit \
+openbox \
+lightdm \
+unclutter \
+chromium-browser \
+python3-venv \
+python3-pip \
+npm \
+git \
+curl
 
 # Imposta LightDM per login automatico in grafica
 echo "🖥️ Configuro LightDM per login automatico..."
@@ -45,8 +37,7 @@ user-session=openbox
 EOF
 
 echo "📦 Aggiorno Node..."
-sudo apt-get purge -y nodejs npm || true 
-sudo apt-get autoremove -y || true
+sudo apt-get remove -y nodejs || true
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
@@ -57,31 +48,31 @@ source venv/bin/activate
 echo "📦 Installo dipendenze Python da requirements.txt..."
 pip install --upgrade pip
 if [ -f "requirements.txt" ]; then
-    echo "📦 Tentativo 1: installazione da piwheels + pypi"
-    if ! pip install -r requirements.txt --default-timeout=100; then
-        echo "⚠️ Ritento (2/3) usando solo PyPI..."
-        if ! pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100; then
-            echo "⚠️ Ritento (3/3) con DNS Google..."
-            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null || true
-            pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100
-        fi
-    fi
+echo "📦 Tentativo 1: installazione da piwheels + pypi"
+if ! pip install -r requirements.txt --default-timeout=100; then
+echo "⚠️ Ritento (2/3) usando solo PyPI..."
+if ! pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100; then
+echo "⚠️ Ritento (3/3) con DNS Google..."
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null || true
+pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100
+fi
+fi
 else
-    echo "⚠️ Nessun requirements.txt trovato, salto installazione pacchetti Python."
+echo "⚠️ Nessun requirements.txt trovato, salto installazione pacchetti Python."
 fi
 
 echo "📦 Installo dipendenze npm per il frontend..."
 if [ -d "$PROJECT_DIR/frontend" ]; then
-    cd "$PROJECT_DIR/frontend"
-    npm install --no-audit --no-fund
-    if npm run | grep -q "build"; then
-        npm run build
-    else
-        echo "⚠️ Nessuno script build trovato in package.json."
-    fi
-    cd "$PROJECT_DIR"
+cd "$PROJECT_DIR/frontend"
+npm install --no-audit --no-fund
+if npm run | grep -q "build"; then
+npm run build
 else
-    echo "⚠️ Cartella frontend non trovata, salto build."
+echo "⚠️ Nessuno script build trovato in package.json."
+fi
+cd "$PROJECT_DIR"
+else
+echo "⚠️ Cartella frontend non trovata, salto build."
 fi
 
 echo "📦 Installo globalmente il server statico serve..."
@@ -163,101 +154,19 @@ EOF
 sudo chmod 440 "$SUDOERS_FILE"
 
 echo "🧩 Configuro autostart di Openbox (kiosk)..."
-# Usa $HOME_DIR se hai applicato la correzione dell'utente
 mkdir -p /home/$USERNAME/.config/openbox
 cat > /home/$USERNAME/.config/openbox/autostart <<EOF
-#!/bin/bash
-# ----------------------------------------------
-
-# 1. Attesa e Configurazione Base
-sleep 5
 xset s off
 xset -dpms
 xset s noblank
-
-# 2. Nasconde il cursore
 unclutter -idle 0 &
-
-# 3. Avvia Chromium (con flag per Kiosk e minimale)
-/usr/bin/chromium-browser \
-    --display=:0 \
-    --noerrdialogs \
-    --disable-infobars \
-    --kiosk http://localhost/?kiosk=true \
-    --no-sandbox \
-    --disable-gpu \
-    --disable-software-rasterizer \
-    --enable-features=OverlayScrollbar \
-    --force-device-scale-factor=1 \
-    --ignore-gpu-blocklist \
-    &
-
-# ----------------------------------------------
+chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost:3000/?kiosk=true &
 EOF
-sudo chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
-
-# NUOVO COMANDO: Rende il file eseguibile
-echo "Permessi: Rendo autostart eseguibile..."
-sudo chmod +x /home/$USERNAME/.config/openbox/autostart
+chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
 
 echo "🔌 Installo e abilito pigpio daemon..."
 sudo apt-get install -y pigpio
 sudo systemctl enable pigpiod.service
 sudo systemctl start pigpiod.service
-
-echo "🌐 Installo Nginx..."
-sudo apt-get install -y nginx
-
-echo "🛠️ Configuro Nginx come reverse proxy..."
-
-NGINX_CONF="/etc/nginx/sites-available/dryer"
-
-sudo tee $NGINX_CONF > /dev/null <<EOF
-server {
-    listen 80;
-    server_name _;
-
-    # Frontend
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    # Backend
-    location /api/ {
-        proxy_pass http://localhost:8000/api/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-
-        proxy_read_timeout 300;
-        proxy_connect_timeout 300;
-    }
-
-    # Gestione WebSocket (FastAPI/uvicorn)
-    location /ws/ {
-        proxy_pass http://localhost:8000/ws/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    # Compressione
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript application/xml;
-    gzip_min_length 256;
-}
-EOF
-
-sudo ln -sf $NGINX_CONF /etc/nginx/sites-enabled/dryer
-sudo rm -f /etc/nginx/sites-enabled/default
-
-echo "🔁 Riavvio Nginx..."
-sudo systemctl restart nginx
-sudo systemctl enable nginx
 
 echo "✅ Installazione completata — sistema kiosk pronto al riavvio!"
