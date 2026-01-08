@@ -172,7 +172,24 @@ xset s off
 xset -dpms
 xset s noblank
 unclutter -idle 0 &
-chromium-browser --noerrdialogs --disable-infobars --kiosk http://localhost/?kiosk=true &
+xset s off
+xset -dpms
+xset s noblank
+unclutter -idle 0 &
+
+chromium-browser \
+--noerrdialogs \
+--disable-infobars \
+--kiosk \
+--disable-gpu \
+--disable-software-rasterizer \
+--disable-dev-shm-usage \
+--no-sandbox \
+--process-per-site \
+--disk-cache-size=1 \
+--media-cache-size=1 \
+http://localhost/?kiosk=true &
+
 EOF
 chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
 
