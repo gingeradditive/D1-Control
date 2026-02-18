@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BASE_URL = `${window.location.protocol}//${window.location.hostname}`;
+const BASE_URL = import.meta.env.DEV 
+  ? `${window.location.protocol}//${window.location.hostname}:3000`
+  : `${window.location.protocol}//${window.location.hostname}`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
