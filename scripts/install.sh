@@ -11,6 +11,12 @@ USERNAME=$(whoami)
 echo "📦 Aggiorno sistema e installo pacchetti base..."
 sudo apt-get update -y
 sudo apt-get upgrade -y
+
+echo "📦 Aggiorno Node..."
+sudo apt-get remove -y nodejs npm node-* || true
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
 sudo apt-get install --no-install-recommends -y \
 xserver-xorg \
 x11-xserver-utils \
@@ -48,12 +54,7 @@ autologin-user-timeout=0
 user-session=openbox
 EOF
 
-echo "📦 Aggiorno Node..."
-sudo apt-get remove -y nodejs npm node-* || true
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-echo "🐍 Creo ambiente virtuale Python..."
+echo " Creo ambiente virtuale Python..."
 python3 -m venv venv
 source venv/bin/activate
 
