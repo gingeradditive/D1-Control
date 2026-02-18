@@ -91,6 +91,8 @@ fi
 
 echo "📦 Installo globalmente il server statico serve..."
 sudo npm install -g serve
+SERVE_PATH=$(which serve)
+echo "serve trovato in: $SERVE_PATH"
 
 echo "=== ⚙️ CONFIGURO SERVIZI SYSTEMD ==="
 
@@ -119,7 +121,7 @@ After=network.target
 [Service]
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR/frontend
-ExecStart=/usr/local/bin/serve -s dist -l 3000
+ExecStart=$SERVE_PATH -s dist -l 3000
 Restart=always
 
 [Install]
