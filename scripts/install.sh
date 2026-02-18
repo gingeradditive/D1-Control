@@ -49,7 +49,7 @@ user-session=openbox
 EOF
 
 echo "📦 Aggiorno Node..."
-sudo apt-get remove -y nodejs || true
+sudo apt-get remove -y nodejs npm node-* || true
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
