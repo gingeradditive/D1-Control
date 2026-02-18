@@ -1,3 +1,4 @@
+import time
 from fastapi import APIRouter, Query
 from backend.core.state import controllers
 
@@ -8,6 +9,9 @@ dryer = controllers["dryer"]
 def get_status():
     latest = dryer.get_status_data()
     timestamp, max6675_temp, sht40_temp, dew_point, ssr_heater, ssr_fan, status, valve, hum_abs = latest
+    elapsed = 0
+    if dryer.dryer_status and dryer.session_start_time is not None:
+        elapsed = int(time.time() - dryer.session_start_time)
     return {
         "setpoint": dryer.set_temp,
         "current_temp": round(max6675_temp),
@@ -18,6 +22,7 @@ def get_status():
         "status": status,
         "valve": valve,
         "errors": dryer.errors,
+        "drying_elapsed_seconds": elapsed,
     }
 
 @router.post("/status/{status}")

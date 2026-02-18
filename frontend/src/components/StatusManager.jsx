@@ -29,7 +29,8 @@ export default function StatusManager() {
     fan: false,
     status: false,
     valve: false,
-    errors: {}
+    errors: {},
+    drying_elapsed_seconds: 0,
   });
 
   // Mostra toast per nuovi errori
@@ -218,6 +219,7 @@ export default function StatusManager() {
           currentTemp={status.current_temp}
           setpoint={status.setpoint}
           status={status.status}
+          dryingElapsedSeconds={status.drying_elapsed_seconds}
         />
         <Controls direction="up" onClick={handleIncrease} />
       </Box>

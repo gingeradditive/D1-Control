@@ -1,6 +1,13 @@
 import { Box, Typography } from "@mui/material";
 
-export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
+function formatElapsed(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export default function TemperatureDisplay({ currentTemp, setpoint, status, dryingElapsedSeconds }) {
   // Colori condizionati dallo status
   const ringColor = status ? "#d72e28" : "#ccc";
   const animated = status;
@@ -74,6 +81,11 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
           <Typography variant="body2" color="gray">
             Set {setpoint !== null ? `${setpoint}°` : ""}
           </Typography>
+          {status && dryingElapsedSeconds > 0 && (
+            <Typography variant="caption" color="gray" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+              {formatElapsed(dryingElapsedSeconds)}
+            </Typography>
+          )}
         </Box>
       </Box>
 
