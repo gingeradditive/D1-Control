@@ -30,7 +30,6 @@ unclutter \
 chromium-browser \
 python3-venv \
 python3-pip \
-npm \
 git \
 curl \
 accountsservice
