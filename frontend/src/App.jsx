@@ -4,38 +4,16 @@ import Header from './components/Header';
 import StatusManager from './components/StatusManager';
 import DateTimeDisplay from './components/DateTimeDisplay';
 import BackButton from './components/BackButton';
-import DevDialog from './components/DevDialog';
 import './App.css';
 import { api } from './api';
 import "react-simple-keyboard/build/css/index.css";
 import { KeyboardProvider } from './KeyboardContext';
 import VirtualKeyboard from './components/VirtualKeyboard';
 import { SnackbarProvider } from 'notistack';
-import { jsx } from 'react/jsx-runtime';
 
 export default function App() {
   const [showBackButton, setShowBackButton] = useState(false);
-  const [showDevDialog, setShowDevDialog] = useState(false); // ⬅️ stato nuovo
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
-
-  // 👇 Contatore dei click veloci sul logo
-  const clickCountRef = useRef(0);
-  const lastClickTimeRef = useRef(0);
-
-  const handleLogoClick = () => {
-    const now = Date.now();
-    if (now - lastClickTimeRef.current > 2000) {
-      clickCountRef.current = 1; // reset se troppo lento
-    } else {
-      clickCountRef.current += 1;
-    }
-    lastClickTimeRef.current = now;
-
-    if (clickCountRef.current >= 5) {
-      setShowDevDialog(true);
-      clickCountRef.current = 0; // resetta dopo apertura
-    }
-  };
 
   useEffect(() => {
     const checkG1OS = async () => {
@@ -112,7 +90,6 @@ export default function App() {
             component="img"
             src="/Logo_ginger.svg"
             alt="Logo Ginger"
-            onClick={handleLogoClick}
             sx={{
               position: 'fixed',
               bottom: 16,
@@ -122,9 +99,6 @@ export default function App() {
               height: 'auto',
               opacity: 0.7,
               zIndex: 10,
-              cursor: 'pointer',
-              transition: 'opacity 0.2s',
-              '&:active': { opacity: 1 },
             }}
           />
 
@@ -137,8 +111,6 @@ export default function App() {
 
         <VirtualKeyboard />
 
-        {/* Pannello sviluppatore */}
-        {showDevDialog && <DevDialog open={showDevDialog} onClose={() => setShowDevDialog(false)} />}
       </KeyboardProvider>
     </SnackbarProvider>
   );
