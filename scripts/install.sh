@@ -117,7 +117,7 @@ After=network.target
 [Service]
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR/frontend
-ExecStart=/usr/bin/serve -s dist -l 3000
+ExecStart=/usr/local/bin/serve -s dist -l 3000
 Restart=always
 
 [Install]
