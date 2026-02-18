@@ -10,6 +10,8 @@ def background_loop(controllers, is_running):
         now, max6675_temp, hum_abs, sht40_temp, dew_point = dryer.read_sensor()
         dryer.update_heater_pid_discrete(max6675_temp)
 
+        dryer.periodic_save_hours()
+
         if time.time() - dryer.log_timer >= 10:
             dryer.log_timer = time.time()
             dryer.log(now.strftime('%Y-%m-%d %H:%M:%S'),

@@ -9,12 +9,14 @@ import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import AreaChartIcon from '@mui/icons-material/AreaChart';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 // import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
 
 import WifiDialog from './WifiDialog';
 import AlarmDialog from './AlarmDialog';
 import ChartDialog from './ChartDialog';
 import SettingsDialog from './SettingsDialog';
+import StatsDialog from './StatsDialog';
 
 import { api } from '../api'; // Assicurati che l'import sia corretto
 
@@ -105,6 +107,7 @@ export default function Header() {
         </Box>
         <Box display="flex" alignItems="center">
           <IconButton onClick={handleOpen('chart')}><AreaChartIcon /></IconButton>
+          <IconButton onClick={handleOpen('stats')}><QueryStatsIcon /></IconButton>
           <IconButton onClick={handleOpen('settings')}><SettingsIcon /></IconButton>
         </Box>
       </Box>
@@ -132,6 +135,11 @@ export default function Header() {
         onClose={handleClose}
         keysToShow={keysToShow}
         titlesMap={titlesMap}
+      />
+
+      <StatsDialog
+        open={openModal === 'stats'}
+        onClose={handleClose}
       />
     </>
   );

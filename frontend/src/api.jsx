@@ -39,6 +39,9 @@ export const api = {
   /** 🔄 Factory Reset Config */
   resetConfigurations: () => apiClient.post("/api/config/reset"),
 
+  // --- Stats ---
+  getStats: () => apiClient.get("/api/stats"),
+
   // --- Update ---
   getUpdateVersion: () => apiClient.get("/api/update/version"),
   getUpdateCheck: () => apiClient.get("/api/update/check"),

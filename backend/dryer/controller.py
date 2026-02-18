@@ -40,6 +40,11 @@ class DryerController:
         self.valve_last_switch_time = time.time()
         self.hum_abs = 0.0
 
+        # operating hours tracking
+        self.total_hours = self.config.get("total_operating_hours", 0.0, float)
+        self.session_start_time = None
+        self._hours_save_timer = time.time()
+
         self.errors = {}
 
         # components
@@ -62,6 +67,7 @@ class DryerController:
             self.dryer_status = True
             self.cooldown_active = False
             self.fan_cooldown_end = None
+            self.session_start_time = time.time()
             self.fan.on()
             self.valve.close()
             self.valve_last_switch_time = time.time()
@@ -69,6 +75,7 @@ class DryerController:
     
     def stop(self):
         if self.dryer_status:
+            self._accumulate_session_hours()
             self.dryer_status = False
             self.heater.off()
             print("Heater stopped.")
@@ -165,7 +172,32 @@ class DryerController:
         except Exception as e:
             print(f"[DryerController] Log error: {e}")
 
+    def _accumulate_session_hours(self):
+        if self.session_start_time is not None:
+            elapsed = (time.time() - self.session_start_time) / 3600.0
+            self.total_hours += elapsed
+            self.config.set("total_operating_hours", round(self.total_hours, 4))
+            self.session_start_time = None
+
+    def get_operating_hours(self):
+        partial = 0.0
+        if self.dryer_status and self.session_start_time is not None:
+            partial = (time.time() - self.session_start_time) / 3600.0
+        return {
+            "partial_hours": round(partial, 4),
+            "total_hours": round(self.total_hours + partial, 4),
+        }
+
+    def periodic_save_hours(self):
+        if self.dryer_status and self.session_start_time is not None:
+            now = time.time()
+            if now - self._hours_save_timer >= 300:
+                elapsed = (now - self.session_start_time) / 3600.0
+                self.config.set("total_operating_hours", round(self.total_hours + elapsed, 4))
+                self._hours_save_timer = now
+
     def shutdown(self):
+        self._accumulate_session_hours()
         # make sure all actuators are turned off and resources cleaned
         try:
             self.heater.off()
