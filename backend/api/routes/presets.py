@@ -13,7 +13,7 @@ HARDCODED_PRESETS = [
     {
         "id": "pla",
         "name": "PLA",
-        "temperature": 45,
+        "temperature": 50,
         "builtin": True,
     },
     {
