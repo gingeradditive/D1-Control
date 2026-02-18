@@ -59,4 +59,11 @@ export const api = {
       new URLSearchParams({ timezone }).toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     ),
+
+  // --- Presets ---
+  getPresets: () => apiClient.get("/api/presets/"),
+  createPreset: (name, temperature) =>
+    apiClient.post("/api/presets/", { name, temperature }),
+  updatePreset: (id, data) => apiClient.put(`/api/presets/${id}`, data),
+  deletePreset: (id) => apiClient.delete(`/api/presets/${id}`),
 };

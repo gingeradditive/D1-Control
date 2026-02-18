@@ -26,7 +26,7 @@ const mockChartData = Array.from({ length: 10 }, (_, i) => ({
   humidity: 50 + i * 2,
 }));
 
-export default function Header() {
+export default function Header({ onPresetSaved }) {
   const [openModal, setOpenModal] = useState(null);
   const [range, setRange] = useState('1h');
   const [network, setNetwork] = useState({
@@ -135,6 +135,7 @@ export default function Header() {
         onClose={handleClose}
         keysToShow={keysToShow}
         titlesMap={titlesMap}
+        onPresetSaved={onPresetSaved}
       />
 
       <StatsDialog

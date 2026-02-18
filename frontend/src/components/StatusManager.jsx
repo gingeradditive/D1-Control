@@ -8,7 +8,7 @@ import ScreensaverOverlay from './ScreensaverOverlay';
 import { useSnackbar } from 'notistack';
 import CloseIcon from '@mui/icons-material/Close';
 
-export default function StatusManager() {
+export default function StatusManager({ presetsVersion }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
 
   const [isScreensaverActive, setIsScreensaverActive] = useState(false);
@@ -19,6 +19,9 @@ export default function StatusManager() {
   const activeErrorsRef = useRef(new Map()); // description_date → snackbarId
   const updateSnackbarRef = useRef(null);   // unico toast per update disponibile
   const filterAlertRef = useRef(null);      // toast for filter cleaning alert
+
+  const [presets, setPresets] = useState([]);
+  const [activePresetId, setActivePresetId] = useState(null);
 
   const [status, setStatus] = useState({
     current_temp: null,
@@ -73,6 +76,17 @@ export default function StatusManager() {
       }
     });
   }, [status.errors, enqueueSnackbar, closeSnackbar]);
+
+  // Fetch presets
+  const fetchPresets = () => {
+    api.getPresets()
+      .then(res => setPresets(res.data))
+      .catch(err => console.error("Error fetching presets:", err));
+  };
+
+  useEffect(() => {
+    fetchPresets();
+  }, [presetsVersion]);
 
   // Fetch configurazione timeout
   useEffect(() => {
@@ -190,6 +204,7 @@ export default function StatusManager() {
   const handleIncrease = () => {
     let newSet = Math.min(status.setpoint + 5, 70);
     api.setPoint(newSet);
+    setActivePresetId(null);
     api.getStatus()
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
@@ -198,6 +213,15 @@ export default function StatusManager() {
   const handleDecrease = () => {
     let newSet = Math.max(status.setpoint - 5, 0);
     api.setPoint(newSet);
+    setActivePresetId(null);
+    api.getStatus()
+      .then(res => setStatus(res.data))
+      .catch(err => console.error("Errore nel fetch /status:", err));
+  };
+
+  const handlePresetSelect = (preset) => {
+    api.setPoint(preset.temperature);
+    setActivePresetId(preset.id);
     api.getStatus()
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
@@ -233,6 +257,9 @@ export default function StatusManager() {
         fan={status.fan}
         valve={status.valve}
         onStatusChange={handleStatusChange}
+        presets={presets}
+        activePresetId={activePresetId}
+        onPresetSelect={handlePresetSelect}
       />
 
       {isKiosk && isScreensaverActive && (

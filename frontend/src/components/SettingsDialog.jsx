@@ -5,14 +5,17 @@ import {
   TextField, Grid, DialogContentText, Autocomplete
 } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
+import TuneIcon from '@mui/icons-material/Tune';
 import { api } from '../api';
 import { useKeyboard } from '../KeyboardContext';
+import PresetsDialog from './PresetsDialog';
 
 export default function SettingsDialog({
   open,
   onClose,
   keysToShow = null,
   titlesMap = {},
+  onPresetSaved,
 }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
   const { openKeyboard } = useKeyboard();
@@ -34,6 +37,9 @@ export default function SettingsDialog({
   // ⚙️ Factory Reset
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  // 🎛️ Presets Dialog
+  const [showPresetsDialog, setShowPresetsDialog] = useState(false);
 
   const handleFactoryReset = () => {
     setResetting(true);
@@ -234,6 +240,20 @@ export default function SettingsDialog({
 
             <Divider sx={{ my: 2 }} />
 
+            {/* --- Presets Management --- */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>Drying Presets</Typography>
+              <Button
+                variant="outlined"
+                startIcon={<TuneIcon />}
+                onClick={() => setShowPresetsDialog(true)}
+              >
+                Manage Presets
+              </Button>
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
             {/* --- Version Info & Update --- */}
             <Box sx={{ mb: 3 }}>
               {versionInfo && (
@@ -292,6 +312,13 @@ export default function SettingsDialog({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Presets Management Dialog */}
+      <PresetsDialog
+        open={showPresetsDialog}
+        onClose={() => setShowPresetsDialog(false)}
+        onPresetSaved={onPresetSaved}
+      />
 
       {/* Confirm Factory Reset Dialog */}
       <Dialog open={showConfirmReset} onClose={() => setShowConfirmReset(false)}>

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from threading import Thread
 import time
 
-from backend.api.routes import dryer, network, update, config, stats
+from backend.api.routes import dryer, network, update, config, stats, presets
 from backend.core.background import background_loop
 from backend.core.state import controllers
 
@@ -29,6 +29,7 @@ app.include_router(network.router, prefix="/api/network", tags=["Network"])
 app.include_router(update.router, prefix="/api/update", tags=["Update"])
 app.include_router(config.router, prefix="/api/config", tags=["Config"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Stats"])
+app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
 
 # ---------------------------
 # ⚙️ BACKGROUND LOOP (dryer)

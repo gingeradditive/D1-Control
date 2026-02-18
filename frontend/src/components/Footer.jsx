@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Switch, styled } from "@mui/material";
+import { Box, Typography, Switch, styled, Select, MenuItem, FormControl } from "@mui/material";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import DewPointIcon from '@mui/icons-material/DewPoint';
@@ -33,7 +33,7 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
   },
 }));
 
-export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusChange, heater, fan, valve }) {
+export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusChange, heater, fan, valve, presets = [], activePresetId, onPresetSelect }) {
   const [checked, setChecked] = useState(status);
 
   // Sync internal state with external prop
@@ -56,17 +56,29 @@ export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusCh
       borderRadius={2}
       mt={2}
     >
-      <Box display="flex" justifyContent="center" alignItems="baseline">
-        {/* <WaterDropIcon fontSize="small" />
-        <Typography variant="caption" sx={{ fontSize: '0.6em', ml: 0.2 }}>ext</Typography>
-        <Typography variant="h6" sx={{ ml: 0.5 }}>{ext_hum !== null ? `${ext_hum}%` : ""}</Typography>
-        <Typography variant="h6" sx={{ color: "#cccccc", padding: "0px 10px" }}>/</Typography> */}
-        {/* <WaterDropIcon fontSize="small" />
-        <Typography variant="h6" sx={{ ml: 0.5 }}>{int_hum !== null ? `${int_hum}` : "-"}</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.9em', ml: 0.2 }}>mg/m³</Typography>
-        <DewPointIcon fontSize="small" sx={{ ml: 2 }}/>
-        <Typography variant="h6" sx={{ ml: 0.5 }}>{dew_point !== null ? `${dew_point}` : "-"}</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.9em', ml: 0.2 }}>C°</Typography> */}
+      <Box display="flex" alignItems="center">
+        {presets.length > 0 && (
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <Select
+              value={activePresetId || ''}
+              onChange={(e) => {
+                const preset = presets.find(p => p.id === e.target.value);
+                if (preset) onPresetSelect(preset);
+              }}
+              displayEmpty
+              sx={{ fontSize: '0.85rem', height: 36 }}
+            >
+              <MenuItem value="" disabled>
+                <em>Use Preset</em>
+              </MenuItem>
+              {presets.map((preset) => (
+                <MenuItem key={preset.id} value={preset.id}>
+                  {preset.name} ({preset.temperature}°C)
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
       </Box>
       <Box position="relative" display="flex" justifyContent="end" alignItems="center"> 
         <CheckLight

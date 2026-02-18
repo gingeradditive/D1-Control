@@ -13,6 +13,8 @@ import { SnackbarProvider } from 'notistack';
 
 export default function App() {
   const [showBackButton, setShowBackButton] = useState(false);
+  const [presetsVersion, setPresetsVersion] = useState(0);
+  const handlePresetSaved = () => setPresetsVersion(v => v + 1);
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
 
   useEffect(() => {
@@ -81,8 +83,8 @@ export default function App() {
               zIndex: 1,
             }}
           >
-            <Header />
-            <StatusManager />
+            <Header onPresetSaved={handlePresetSaved} />
+            <StatusManager presetsVersion={presetsVersion} />
           </Container>
 
           {/* Logo cliccabile */}
