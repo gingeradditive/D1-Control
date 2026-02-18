@@ -47,3 +47,17 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
 def set_setpoint(value: float):
     dryer.update_setpoint(value)
     return {"setpoint": dryer.set_temp}
+
+@router.post("/filter/reset")
+def reset_filter_hours():
+    dryer.reset_filter_hours()
+    return {"filter_hours": 0.0}
+
+@router.post("/filter/set/{hours}")
+def set_filter_hours(hours: float):
+    dryer._accumulate_session_hours()
+    dryer.filter_hours = hours
+    dryer.config.set("filter_operating_hours", round(hours, 4))
+    if dryer.dryer_status:
+        dryer.session_start_time = __import__("time").time()
+    return {"filter_hours": hours}

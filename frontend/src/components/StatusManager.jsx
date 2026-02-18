@@ -18,6 +18,7 @@ export default function StatusManager() {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const activeErrorsRef = useRef(new Map()); // description_date → snackbarId
   const updateSnackbarRef = useRef(null);   // unico toast per update disponibile
+  const filterAlertRef = useRef(null);      // toast for filter cleaning alert
 
   const [status, setStatus] = useState({
     current_temp: null,
@@ -116,6 +117,47 @@ export default function StatusManager() {
 
     checkUpdate();
   }, [enqueueSnackbar]);
+
+  // Filter cleaning alert
+  useEffect(() => {
+    const FILTER_MAX_HOURS = 500;
+    const checkFilter = async () => {
+      try {
+        const response = await api.getStats();
+        const filterHours = response.data?.dryer?.filter_hours ?? 0;
+        if (filterHours >= FILTER_MAX_HOURS && !filterAlertRef.current) {
+          const id = enqueueSnackbar(
+            `Filter cleaning required! (${Math.floor(filterHours)}h / ${FILTER_MAX_HOURS}h). Reset counter in Statistics dialog.`,
+            {
+              variant: "warning",
+              persist: true,
+              action: (snackbarId) => (
+                <IconButton
+                  onClick={() => {
+                    closeSnackbar(snackbarId);
+                    filterAlertRef.current = null;
+                  }}
+                  size="small"
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )
+            }
+          );
+          filterAlertRef.current = id;
+        } else if (filterHours < FILTER_MAX_HOURS && filterAlertRef.current) {
+          closeSnackbar(filterAlertRef.current);
+          filterAlertRef.current = null;
+        }
+      } catch (error) {
+        console.error("Error checking filter hours:", error);
+      }
+    };
+
+    checkFilter();
+    const interval = setInterval(checkFilter, 60000);
+    return () => clearInterval(interval);
+  }, [enqueueSnackbar, closeSnackbar]);
 
   // Event handler per interazione utente
   const resetTimer = () => {

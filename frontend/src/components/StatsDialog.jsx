@@ -11,6 +11,9 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import TimerIcon from '@mui/icons-material/Timer';
 import SpeedIcon from '@mui/icons-material/Speed';
 import DnsIcon from '@mui/icons-material/Dns';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { api } from '../api';
 
 function formatUptime(seconds) {
@@ -75,6 +78,8 @@ function InfoRow({ label, value, bold = false }) {
     </Box>
   );
 }
+
+const FILTER_MAX_HOURS = 500;
 
 export default function StatsDialog({ open, onClose }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
@@ -178,6 +183,55 @@ export default function StatsDialog({ open, onClose }) {
                 variant={dry?.status ? 'filled' : 'outlined'}
                 sx={{ fontWeight: 600, fontSize: '0.65rem', height: 22 }}
               />
+            </Box>
+
+            <Divider sx={{ my: 1 }} />
+
+            {/* Filter Maintenance */}
+            <SectionTitle icon={<FilterAltIcon sx={{ fontSize: 16, color: (dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS ? 'error.main' : 'info.main' }} />} title="Filter Maintenance" />
+            <Box display="flex" alignItems="center" gap={2} py={0.5}>
+              <Box flex={1}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.25}>
+                  <Typography variant="caption" color="text.secondary" fontSize="0.65rem">
+                    Hours since last cleaning
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    fontSize="0.7rem"
+                    color={(dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS ? 'error.main' : 'text.primary'}
+                  >
+                    {formatHours(dry?.filter_hours)} / {FILTER_MAX_HOURS}h
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min(((dry?.filter_hours ?? 0) / FILTER_MAX_HOURS) * 100, 100)}
+                  color={(dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS ? 'error' : 'info'}
+                  sx={{ height: 8, borderRadius: 4, bgcolor: '#f0f0f0' }}
+                />
+                {(dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS && (
+                  <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
+                    <WarningAmberIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                    <Typography variant="caption" color="error.main" fontWeight={600} fontSize="0.65rem">
+                      Filter cleaning required!
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<RestartAltIcon />}
+                onClick={() => {
+                  api.resetFilterHours().then(() => {
+                    api.getStats().then(res => setStats(res.data));
+                  });
+                }}
+                sx={{ minWidth: 90, fontSize: '0.65rem', textTransform: 'none', height: 32 }}
+              >
+                Reset
+              </Button>
             </Box>
 
             <Divider sx={{ my: 1 }} />

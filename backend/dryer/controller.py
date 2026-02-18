@@ -42,6 +42,7 @@ class DryerController:
 
         # operating hours tracking
         self.total_hours = self.config.get("total_operating_hours", 0.0, float)
+        self.filter_hours = self.config.get("filter_operating_hours", 0.0, float)
         self.session_start_time = None
         self._hours_save_timer = time.time()
 
@@ -176,7 +177,9 @@ class DryerController:
         if self.session_start_time is not None:
             elapsed = (time.time() - self.session_start_time) / 3600.0
             self.total_hours += elapsed
+            self.filter_hours += elapsed
             self.config.set("total_operating_hours", round(self.total_hours, 4))
+            self.config.set("filter_operating_hours", round(self.filter_hours, 4))
             self.session_start_time = None
 
     def get_operating_hours(self):
@@ -186,6 +189,7 @@ class DryerController:
         return {
             "partial_hours": round(partial, 4),
             "total_hours": round(self.total_hours + partial, 4),
+            "filter_hours": round(self.filter_hours + partial, 4),
         }
 
     def periodic_save_hours(self):
@@ -194,7 +198,15 @@ class DryerController:
             if now - self._hours_save_timer >= 300:
                 elapsed = (now - self.session_start_time) / 3600.0
                 self.config.set("total_operating_hours", round(self.total_hours + elapsed, 4))
+                self.config.set("filter_operating_hours", round(self.filter_hours + elapsed, 4))
                 self._hours_save_timer = now
+
+    def reset_filter_hours(self):
+        self._accumulate_session_hours()
+        self.filter_hours = 0.0
+        self.config.set("filter_operating_hours", 0.0)
+        if self.dryer_status:
+            self.session_start_time = time.time()
 
     def shutdown(self):
         self._accumulate_session_hours()

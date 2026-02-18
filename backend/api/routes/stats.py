@@ -108,6 +108,7 @@ def get_stats():
         "dryer": {
             "partial_hours": hours["partial_hours"],
             "total_hours": hours["total_hours"],
+            "filter_hours": hours["filter_hours"],
             "status": dryer.dryer_status,
         },
         "system": {
