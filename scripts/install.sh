@@ -13,7 +13,9 @@ sudo apt-get update -y
 sudo apt-get upgrade -y
 
 echo "📦 Aggiorno Node..."
-sudo apt-get remove -y nodejs npm node-* || true
+sudo apt-get remove --purge -y nodejs npm node-* handlebars node-ansi-escapes node-argparse node-chokidar node-es-abstract node-eslint-scope node-file-entry-cache node-flat-cache node-for-in node-functional-red-black-tree node-is-extendable node-jest-worker node-jsesc node-neo-async node-regenerate node-source-map-support node-strip-json-comments node-to-regex-range node-unique-filename || true
+sudo apt-get autoremove -y || true
+sudo apt-get autoclean || true
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
