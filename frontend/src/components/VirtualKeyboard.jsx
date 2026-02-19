@@ -74,6 +74,7 @@ export default function VirtualKeyboard() {
       const newVal = localValue.slice(0, -1);
       setLocalValue(newVal);
       keyboardRef.current.setInput(newVal);
+      updateValue?.(newVal);
     }
 
     if (button === '{lock}') {
