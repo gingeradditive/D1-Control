@@ -6,9 +6,24 @@ import {
 } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import TuneIcon from '@mui/icons-material/Tune';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import MemoryIcon from '@mui/icons-material/Memory';
+import SystemUpdateIcon from '@mui/icons-material/SystemUpdate';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { api } from '../api';
 import { useKeyboard } from '../KeyboardContext';
 import PresetsDialog from './PresetsDialog';
+
+function SectionTitle({ icon, title }) {
+  return (
+    <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+      {icon}
+      <Typography variant="caption" fontWeight={700} fontSize="0.7rem" color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>
+        {title}
+      </Typography>
+    </Box>
+  );
+}
 
 export default function SettingsDialog({
   open,
@@ -162,19 +177,22 @@ export default function SettingsDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>
-        <Box display="flex" alignItems="center">
-          <SettingsIcon sx={{ mr: 1 }} />
-          Settings
+      <DialogTitle sx={{ py: 1, px: 2 }}>
+        <Box display="flex" alignItems="center" gap={0.75}>
+          <SettingsIcon fontSize="small" />
+          <Typography variant="subtitle1" fontWeight={700}>Settings</Typography>
         </Box>
       </DialogTitle>
 
       <DialogContent
         dividers
         sx={{
+          bgcolor: '#fff',
           '&::-webkit-scrollbar': isKiosk ? { width: '24px', height: '24px' } : {},
           '&::-webkit-scrollbar-thumb': isKiosk ? { backgroundColor: '#888', borderRadius: '4px' } : {},
           '&::-webkit-scrollbar-track': isKiosk ? { backgroundColor: '#f1f1f1', borderRadius: '4px' } : {},
+          px: 2,
+          py: 1.5,
         }}
       >
         {loading && <CircularProgress />}
@@ -186,6 +204,8 @@ export default function SettingsDialog({
 
         {config && !loading && (
           <>
+            <SectionTitle icon={<MemoryIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Configuration Parameters" />
+            <Box sx={{ mb: 1.5 }} />
             <Grid container spacing={2} mb={2}>
               {Object.entries(config)
                 .filter(([key]) => !keysToShow || keysToShow.includes(key))
@@ -213,7 +233,7 @@ export default function SettingsDialog({
             </Grid>
 
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>Timezone</Typography>
+              <SectionTitle icon={<AccessTimeIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Timezone" />
 
               <Autocomplete
                 options={timezones}
@@ -241,11 +261,11 @@ export default function SettingsDialog({
               />
             </Box>
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 1 }} />
 
             {/* --- Presets Management --- */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>Drying Presets</Typography>
+              <SectionTitle icon={<TuneIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Drying Presets" />
               <Button
                 variant="outlined"
                 startIcon={<TuneIcon />}
@@ -255,10 +275,11 @@ export default function SettingsDialog({
               </Button>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 1 }} />
 
             {/* --- Version Info & Update --- */}
             <Box sx={{ mb: 3 }}>
+              <SectionTitle icon={<SystemUpdateIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="System Update" />
               {versionInfo && (
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
                   Version: <strong>{versionInfo.commit.slice(0, 7)}</strong><br />
@@ -286,15 +307,16 @@ export default function SettingsDialog({
         )}
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
         <Button
-          color="error"
+          size="small"
+          startIcon={<RestoreIcon sx={{ fontSize: 16 }} />}
           onClick={() => setShowConfirmReset(true)}
+          color="error"
+          sx={{ textTransform: 'none', fontSize: '0.75rem' }}
         >
           Factory Reset
         </Button>
-
-        <Box flexGrow={1} />
 
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
@@ -302,7 +324,12 @@ export default function SettingsDialog({
 
       {/* Confirm Update Dialog */}
       <Dialog open={showConfirmUpdate} onClose={() => setShowConfirmUpdate(false)}>
-        <DialogTitle>Confirm Update</DialogTitle>
+        <DialogTitle sx={{ py: 1, px: 2 }}>
+          <Box display="flex" alignItems="center" gap={0.75}>
+            <SystemUpdateIcon fontSize="small" />
+            <Typography variant="subtitle1" fontWeight={700}>Confirm Update</Typography>
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
             An update is available. Do you want to apply it now? This may restart the device.
@@ -325,7 +352,12 @@ export default function SettingsDialog({
 
       {/* Confirm Factory Reset Dialog */}
       <Dialog open={showConfirmReset} onClose={() => setShowConfirmReset(false)}>
-        <DialogTitle>Confirm Factory Reset</DialogTitle>
+        <DialogTitle sx={{ py: 1, px: 2 }}>
+          <Box display="flex" alignItems="center" gap={0.75}>
+            <RestoreIcon fontSize="small" />
+            <Typography variant="subtitle1" fontWeight={700}>Confirm Factory Reset</Typography>
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
             This will erase all configuration data and restore defaults.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Typography, Box, LinearProgress, Chip,
@@ -14,6 +14,7 @@ import DnsIcon from '@mui/icons-material/Dns';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import DeveloperBoardIcon from '@mui/icons-material/DeveloperBoard';
 import { api } from '../api';
 
 function formatUptime(seconds) {
@@ -81,10 +82,99 @@ function InfoRow({ label, value, bold = false }) {
 
 const FILTER_MAX_HOURS = 500;
 
+function HardwareInfoDialog({ open, onClose, stats, isKiosk }) {
+  const sys = stats?.system;
+  const mem = sys?.memory;
+  const disk = sys?.disk;
+
+  const getColor = (val, warnAt, critAt) =>
+    (val ?? 0) > critAt ? 'error' : (val ?? 0) > warnAt ? 'warning' : 'primary';
+
+  const memColor = getColor(mem?.percent, 60, 85);
+  const diskColor = getColor(disk?.percent, 60, 85);
+  const cpuColor = getColor(sys?.cpu_usage_percent, 60, 85);
+  const tempColor = getColor(sys?.cpu_temp_c, 60, 75);
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle sx={{ py: 1, px: 2 }}>
+        <Box display="flex" alignItems="center" gap={0.75}>
+          <DeveloperBoardIcon fontSize="small" />
+          <Typography variant="subtitle1" fontWeight={700}>Hardware Info</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent
+        dividers
+        sx={{
+          bgcolor: '#fff',
+          '&::-webkit-scrollbar': isKiosk ? { width: '24px', height: '24px' } : {},
+          '&::-webkit-scrollbar-thumb': isKiosk ? { backgroundColor: '#888', borderRadius: '4px' } : {},
+          '&::-webkit-scrollbar-track': isKiosk ? { backgroundColor: '#f1f1f1', borderRadius: '4px' } : {},
+          px: 2,
+          py: 1.5,
+        }}
+      >
+        <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2.5}>
+          <Box>
+            <SectionTitle icon={<MemoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="CPU" />
+            <Box textAlign="center">
+              <Typography variant="h6" fontWeight={800} color={`${cpuColor}.main`} lineHeight={1.2}>
+                {sys?.cpu_usage_percent != null ? `${sys.cpu_usage_percent}%` : '—'}
+              </Typography>
+            </Box>
+            <ProgressBar value={sys?.cpu_usage_percent} color={cpuColor} />
+            {sys?.cpu_freq_mhz != null && (
+              <InfoRow label="Freq" value={`${sys.cpu_freq_mhz} MHz`} />
+            )}
+          </Box>
+          <Box>
+            <SectionTitle icon={<ThermostatIcon sx={{ fontSize: 16, color: 'error.main' }} />} title="CPU Temp" />
+            <Box textAlign="center">
+              <Typography variant="h6" fontWeight={800} color={`${tempColor}.main`} lineHeight={1.2}>
+                {sys?.cpu_temp_c != null ? `${sys.cpu_temp_c}°C` : '—'}
+              </Typography>
+            </Box>
+            <ProgressBar
+              value={sys?.cpu_temp_c != null ? (sys.cpu_temp_c / 85) * 100 : 0}
+              color={tempColor}
+            />
+          </Box>
+          <Box>
+            <SectionTitle icon={<DnsIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="Memory" />
+            <Box textAlign="center">
+              <Typography variant="h6" fontWeight={800} color={`${memColor}.main`} lineHeight={1.2}>
+                {mem?.percent != null ? `${mem.percent}%` : '—'}
+              </Typography>
+            </Box>
+            <ProgressBar value={mem?.percent} color={memColor} />
+            <InfoRow label="Used" value={mem?.used_mb != null ? `${mem.used_mb} MB` : '—'} />
+            <InfoRow label="Total" value={mem?.total_mb != null ? `${mem.total_mb} MB` : '—'} />
+          </Box>
+          <Box>
+            <SectionTitle icon={<StorageIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="Disk" />
+            <Box textAlign="center">
+              <Typography variant="h6" fontWeight={800} color={`${diskColor}.main`} lineHeight={1.2}>
+                {disk?.percent != null ? `${disk.percent}%` : '—'}
+              </Typography>
+            </Box>
+            <ProgressBar value={disk?.percent} color={diskColor} />
+            <InfoRow label="Used" value={disk?.used_gb != null ? `${disk.used_gb} GB` : '—'} />
+            <InfoRow label="Total" value={disk?.total_gb != null ? `${disk.total_gb} GB` : '—'} />
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function StatsDialog({ open, onClose }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hwOpen, setHwOpen] = useState(false);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -112,19 +202,7 @@ export default function StatsDialog({ open, onClose }) {
     };
   }, [open]);
 
-  const sys = stats?.system;
   const dry = stats?.dryer;
-  const mem = sys?.memory;
-  const disk = sys?.disk;
-  const load = sys?.load_average;
-
-  const getColor = (val, warnAt, critAt) =>
-    (val ?? 0) > critAt ? 'error' : (val ?? 0) > warnAt ? 'warning' : 'primary';
-
-  const memColor = getColor(mem?.percent, 60, 85);
-  const diskColor = getColor(disk?.percent, 60, 85);
-  const cpuColor = getColor(sys?.cpu_usage_percent, 60, 85);
-  const tempColor = getColor(sys?.cpu_temp_c, 60, 75);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -156,10 +234,10 @@ export default function StatsDialog({ open, onClose }) {
           <Box>
 
             {/* Dryer Operating Hours */}
-            <SectionTitle icon={<TimerIcon sx={{ fontSize: 16, color: 'primary.main' }} />} title="Dryer Operating Hours" />
+            <SectionTitle icon={<TimerIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Dryer Operating Hours" />
             <Box display="flex" alignItems="center" justifyContent="center" gap={3} py={0.5}>
               <Box textAlign="center">
-                <Typography variant="h5" fontWeight={800} color="primary.main" lineHeight={1.1}>
+                <Typography variant="h5" fontWeight={800} color="success.main" lineHeight={1.1}>
                   {formatHours(dry?.partial_hours)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" fontSize="0.65rem">
@@ -168,7 +246,7 @@ export default function StatsDialog({ open, onClose }) {
               </Box>
               <Box sx={{ width: '1px', height: 36, bgcolor: '#e0e0e0' }} />
               <Box textAlign="center">
-                <Typography variant="h5" fontWeight={800} color="secondary.main" lineHeight={1.1}>
+                <Typography variant="h5" fontWeight={800} color="primary.main" lineHeight={1.1}>
                   {formatHours(dry?.total_hours)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" fontSize="0.65rem">
@@ -188,7 +266,7 @@ export default function StatsDialog({ open, onClose }) {
             <Divider sx={{ my: 1 }} />
 
             {/* Filter Maintenance */}
-            <SectionTitle icon={<FilterAltIcon sx={{ fontSize: 16, color: (dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS ? 'error.main' : 'info.main' }} />} title="Filter Maintenance" />
+            <SectionTitle icon={<FilterAltIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Filter Maintenance" />
             <Box display="flex" alignItems="center" gap={2} py={0.5}>
               <Box flex={1}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.25}>
@@ -207,8 +285,15 @@ export default function StatsDialog({ open, onClose }) {
                 <LinearProgress
                   variant="determinate"
                   value={Math.min(((dry?.filter_hours ?? 0) / FILTER_MAX_HOURS) * 100, 100)}
-                  color={(dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS ? 'error' : 'info'}
-                  sx={{ height: 8, borderRadius: 4, bgcolor: '#f0f0f0' }}
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 4, 
+                    bgcolor: '#f0f0f0',
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: (dry?.filter_hours ?? 0) >= 500 ? 'rgb(215, 46, 40)' : 
+                                       (dry?.filter_hours ?? 0) >= 300 ? '#f9a825' : 'rgb(46, 125, 50)'
+                    }
+                  }}
                 />
                 {(dry?.filter_hours ?? 0) >= FILTER_MAX_HOURS && (
                   <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
@@ -234,66 +319,28 @@ export default function StatsDialog({ open, onClose }) {
               </Button>
             </Box>
 
-            <Divider sx={{ my: 1 }} />
-
-            {/* CPU, Temp, Memory, Disk — single row */}
-            <Box display="grid" gridTemplateColumns="1fr 1fr 1fr 1fr" gap={2.5}>
-              <Box>
-                <SectionTitle icon={<MemoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="CPU" />
-                <Box textAlign="center">
-                  <Typography variant="h6" fontWeight={800} color={`${cpuColor}.main`} lineHeight={1.2}>
-                    {sys?.cpu_usage_percent != null ? `${sys.cpu_usage_percent}%` : '—'}
-                  </Typography>
-                </Box>
-                <ProgressBar value={sys?.cpu_usage_percent} color={cpuColor} />
-                {sys?.cpu_freq_mhz != null && (
-                  <InfoRow label="Freq" value={`${sys.cpu_freq_mhz} MHz`} />
-                )}
-              </Box>
-              <Box>
-                <SectionTitle icon={<ThermostatIcon sx={{ fontSize: 16, color: 'error.main' }} />} title="CPU Temp" />
-                <Box textAlign="center">
-                  <Typography variant="h6" fontWeight={800} color={`${tempColor}.main`} lineHeight={1.2}>
-                    {sys?.cpu_temp_c != null ? `${sys.cpu_temp_c}°C` : '—'}
-                  </Typography>
-                </Box>
-                <ProgressBar
-                  value={sys?.cpu_temp_c != null ? (sys.cpu_temp_c / 85) * 100 : 0}
-                  color={tempColor}
-                />
-              </Box>
-              <Box>
-                <SectionTitle icon={<DnsIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="Memory" />
-                <Box textAlign="center">
-                  <Typography variant="h6" fontWeight={800} color={`${memColor}.main`} lineHeight={1.2}>
-                    {mem?.percent != null ? `${mem.percent}%` : '—'}
-                  </Typography>
-                </Box>
-                <ProgressBar value={mem?.percent} color={memColor} />
-                <InfoRow label="Used" value={mem?.used_mb != null ? `${mem.used_mb} MB` : '—'} />
-                <InfoRow label="Total" value={mem?.total_mb != null ? `${mem.total_mb} MB` : '—'} />
-              </Box>
-              <Box>
-                <SectionTitle icon={<StorageIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="Disk" />
-                <Box textAlign="center">
-                  <Typography variant="h6" fontWeight={800} color={`${diskColor}.main`} lineHeight={1.2}>
-                    {disk?.percent != null ? `${disk.percent}%` : '—'}
-                  </Typography>
-                </Box>
-                <ProgressBar value={disk?.percent} color={diskColor} />
-                <InfoRow label="Used" value={disk?.used_gb != null ? `${disk.used_gb} GB` : '—'} />
-                <InfoRow label="Total" value={disk?.total_gb != null ? `${disk.total_gb} GB` : '—'} />
-              </Box>
-            </Box>
-
-            
           </Box>
         )}
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+        <Button
+          size="small"
+          startIcon={<DeveloperBoardIcon sx={{ fontSize: 16 }} />}
+          onClick={() => setHwOpen(true)}
+          sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
+        >
+          Hardware Info
+        </Button>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
+
+      <HardwareInfoDialog
+        open={hwOpen}
+        onClose={() => setHwOpen(false)}
+        stats={stats}
+        isKiosk={isKiosk}
+      />
     </Dialog>
   );
 }

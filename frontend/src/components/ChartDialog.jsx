@@ -63,14 +63,7 @@ export default function ChartDialog({ open, onClose }) {
                 </Box>
             </DialogTitle>
             <DialogContent dividers>
-                <Box
-                    display="flex"
-                    flexDirection={{ xs: 'column', sm: 'row' }}
-                    justifyContent="space-between"
-                    alignItems={{ xs: 'flex-start', sm: 'center' }}
-                    mb={2}
-                    gap={2}
-                >
+                <Box mb={2}>
                     <ToggleButtonGroup
                         value={chartType}
                         exclusive
@@ -86,19 +79,6 @@ export default function ChartDialog({ open, onClose }) {
                             dew point
                         </ToggleButton> */}
                     </ToggleButtonGroup>
-
-                    <Box>
-                        <Select
-                            value={range}
-                            onChange={(e) => setRange(e.target.value)}
-                            size="small"
-                            sx={{ minWidth: 160 }}
-                        >
-                            <MenuItem value="1m">Last minute (1 value per second)</MenuItem>
-                            <MenuItem value="1h">Last hour (1 value per minute)</MenuItem>
-                            <MenuItem value="12h">12 hours (2 values per hour)</MenuItem>
-                        </Select>
-                    </Box>
                 </Box>
 
                 {chartType === 'temperature' && (
@@ -140,7 +120,17 @@ export default function ChartDialog({ open, onClose }) {
                     </Box>
                 )}
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                <Select
+                    value={range}
+                    onChange={(e) => setRange(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 160 }}
+                >
+                    <MenuItem value="1m">Last minute (1 value per second)</MenuItem>
+                    <MenuItem value="1h">Last hour (1 value per minute)</MenuItem>
+                    <MenuItem value="12h">12 hours (2 values per hour)</MenuItem>
+                </Select>
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
