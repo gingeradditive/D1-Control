@@ -6,9 +6,20 @@ export DEBIAN_FRONTEND=noninteractive
 echo "=== 🛠️ INSTALLAZIONE SISTEMA KIOSK ==="
 
 PROJECT_DIR=$(pwd)
-USERNAME=$(whoami)
+USERNAME="pi"
 
-echo "📦 Aggiorno sistema e installo pacchetti base..."
+echo "� Creo utente 'pi' con password 'raspberry'..."
+if ! id "$USERNAME" &>/dev/null; then
+    sudo useradd -m -s /bin/bash "$USERNAME"
+    echo "$USERNAME:raspberry" | sudo chpasswd
+    sudo usermod -aG sudo "$USERNAME"
+    echo "✅ Utente '$USERNAME' creato con successo"
+else
+    echo "ℹ️ Utente '$USERNAME' già esistente, aggiorno password..."
+    echo "$USERNAME:raspberry" | sudo chpasswd
+fi
+
+echo "�📦 Aggiorno sistema e installo pacchetti base..."
 sudo apt-get update -y
 sudo apt-get upgrade -y
 
