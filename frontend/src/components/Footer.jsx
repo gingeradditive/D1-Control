@@ -104,11 +104,10 @@ export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusCh
               variant={activePresetId === preset.id ? 'contained' : 'outlined'}
               size="small"
               onClick={() => onPresetSelect(preset)}
-              disabled={!status}
               sx={{
                 borderRadius: '20px',
-                minWidth: 104,
-                maxWidth: 104,
+                minWidth: 94,
+                maxWidth: 94,
                 height: 34,
                 px: 1,
                 textTransform: 'none',

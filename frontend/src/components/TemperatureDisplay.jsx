@@ -27,10 +27,10 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
         <Box
           sx={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
+            top: -2,
+            left: -2,
+            width: "calc(100% + 4px)",
+            height: "calc(100% + 4px)",
             border: `1px dashed ${ringColor}`,
             borderRadius: "50%",
             animation: animated ? "pulse1 9s ease-in-out infinite" : "none",
@@ -39,10 +39,10 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
         <Box
           sx={{
             position: "absolute",
-            top: 7,
-            left: 7,
-            width: 185,
-            height: 185,
+            top: 6,
+            left: 6,
+            width: 187,
+            height: 187,
             border: `2px dotted ${ringColor}`,
             borderRadius: "50%",
             animation: animated ? "pulse2 6s ease-in-out infinite" : "none",
@@ -51,10 +51,10 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
         <Box
           sx={{
             position: "absolute",
-            top: 15,
-            left: 15,
-            width: 170,
-            height: 170,
+            top: 14,
+            left: 14,
+            width: 172,
+            height: 172,
             border: `2px solid ${ringColor}`,
             borderRadius: "50%",
             animation: animated ? "pulse3 3s ease-in-out infinite" : "none",

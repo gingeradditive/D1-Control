@@ -3,7 +3,7 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, Typography, Box, Select, MenuItem, ToggleButtonGroup, ToggleButton
 } from '@mui/material';
-import AreaChartIcon from '@mui/icons-material/AreaChart';
+import TimelineIcon from '@mui/icons-material/Timeline';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer
@@ -58,7 +58,7 @@ export default function ChartDialog({ open, onClose }) {
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
             <DialogTitle>
                 <Box display="flex" alignItems="center">
-                    <AreaChartIcon sx={{ mr: 1 }} />
+                    <TimelineIcon sx={{ mr: 1 }} />
                     History
                 </Box>
             </DialogTitle>

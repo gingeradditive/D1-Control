@@ -4,7 +4,7 @@ import {
   Button, Typography, Box, LinearProgress, Chip,
   CircularProgress, Divider
 } from '@mui/material';
-import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import EqualizerIcon from '@mui/icons-material/Equalizer';
 import MemoryIcon from '@mui/icons-material/Memory';
 import StorageIcon from '@mui/icons-material/Storage';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
@@ -208,7 +208,7 @@ export default function StatsDialog({ open, onClose }) {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle sx={{ py: 1, px: 2 }}>
         <Box display="flex" alignItems="center" gap={0.75}>
-          <QueryStatsIcon fontSize="small" />
+          <EqualizerIcon fontSize="small" />
           <Typography variant="subtitle1" fontWeight={700}>Statistics</Typography>
         </Box>
       </DialogTitle>
