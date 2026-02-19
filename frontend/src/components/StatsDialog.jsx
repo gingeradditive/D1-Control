@@ -11,7 +11,7 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import TimerIcon from '@mui/icons-material/Timer';
 import SpeedIcon from '@mui/icons-material/Speed';
 import DnsIcon from '@mui/icons-material/Dns';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import Grid4x4Icon from '@mui/icons-material/Grid4x4';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import DeveloperBoardIcon from '@mui/icons-material/DeveloperBoard';
@@ -266,7 +266,7 @@ export default function StatsDialog({ open, onClose }) {
             <Divider sx={{ my: 1 }} />
 
             {/* Filter Maintenance */}
-            <SectionTitle icon={<FilterAltIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Filter Maintenance" />
+            <SectionTitle icon={<Grid4x4Icon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="Filter Maintenance" />
             <Box display="flex" alignItems="center" gap={2} py={0.5}>
               <Box flex={1}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.25}>
