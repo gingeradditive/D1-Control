@@ -75,11 +75,11 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
             justifyContent: "center",
           }}
         >
-          <Typography variant="h2" pl={3}>
-            {currentTemp !== null ? `${currentTemp}°` : "--"}
+          <Typography variant="h2" pl={3} className="temperature-degree">
+            {currentTemp !== null ? `${currentTemp}` : "--"}
           </Typography>
-          <Typography variant="body2" color="gray">
-            Set {setpoint !== null ? `${setpoint}°` : ""}
+          <Typography variant="body2" color="gray" className="temperature-degree">
+            Set {setpoint !== null ? `${setpoint}` : ""}
           </Typography>
           {status && dryingElapsedSeconds > 0 && (
             <Typography variant="caption" color="gray" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
@@ -102,6 +102,13 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
         @keyframes pulse3 {
           0%, 100% { transform: scale(1);}
           50% { transform: scale(1.02); }
+        }
+        .temperature-degree::after {
+          content: "°";
+          font-size: 0.8em;
+          vertical-align: baseline;
+          position: relative;
+          top: -0.2em;
         }
       `}</style>
     </Box>
