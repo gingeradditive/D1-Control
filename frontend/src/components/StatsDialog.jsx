@@ -286,19 +286,7 @@ export default function StatsDialog({ open, onClose }) {
               </Box>
             </Box>
 
-            <Divider sx={{ my: 1 }} />
-
-            {/* System Info */}
-            <SectionTitle icon={<SpeedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />} title="System" />
-            <Box display="grid" gridTemplateColumns="1fr 1fr 1fr 1fr" gap={1}>
-              <InfoRow label="Uptime" value={formatUptime(sys?.uptime_seconds)} bold />
-              <InfoRow label="Arch" value={sys?.platform || '—'} bold />
-              <InfoRow label="Hostname" value={sys?.hostname || '—'} bold />
-              {load && (
-                <InfoRow label="Load" value={`${load["1m"]} / ${load["5m"]} / ${load["15m"]}`} bold />
-              )}
-            </Box>
-
+            
           </Box>
         )}
       </DialogContent>
