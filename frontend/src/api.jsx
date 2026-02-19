@@ -29,7 +29,7 @@ export const api = {
   getConfigurations: () => apiClient.get("/api/config"),
   setConfiguration: (key, value) =>
     apiClient.post(
-      "/config/set",
+      "/api/config/set",
       new URLSearchParams({ key, value }).toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     ),
