@@ -16,6 +16,9 @@ DEFAULT_CONFIG = {
     "valve_open_interval": 15,
     "valve_close_interval": 5,
     "inactivity_timeout": 5,
+    "air_purge_time": 60,
+    "drink_cycle_time": 3600,
+    "screensaver_delay": 300,
 }
 
 
