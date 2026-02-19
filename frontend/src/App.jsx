@@ -46,11 +46,14 @@ export default function App() {
         }
       };
       const preventWheel = (e) => { if (e.ctrlKey) e.preventDefault(); };
+      const preventPinch = (e) => { if (e.touches.length > 1) e.preventDefault(); };
       document.addEventListener("keydown", preventZoom, { passive: false });
       document.addEventListener("wheel", preventWheel, { passive: false });
+      document.addEventListener("touchmove", preventPinch, { passive: false });
       return () => {
         document.removeEventListener("keydown", preventZoom);
         document.removeEventListener("wheel", preventWheel);
+        document.removeEventListener("touchmove", preventPinch);
       };
     }
   }, [isKiosk]);
