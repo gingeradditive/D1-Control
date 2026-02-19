@@ -140,12 +140,15 @@ export default function SettingsDialog({
 
   const handleApplyUpdate = () => {
     setUpdating(true);
-    api.getUpdateApply()
+    api.applyUpdate()
       .then(res => {
-        if (res.data.updateApplied) {
-          setUpdateStatus("Update applied. Rebooting...");
+        const data = res.data;
+        if (data.error) {
+          setUpdateStatus(`Update failed: ${data.message}`);
+        } else if (data.updateApplied) {
+          setUpdateStatus(data.message || "Update applied. Rebooting...");
         } else {
-          setUpdateStatus("Already up to date.");
+          setUpdateStatus(data.message || "Already up to date.");
         }
       })
       .catch(() => {

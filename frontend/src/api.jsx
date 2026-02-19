@@ -46,7 +46,7 @@ export const api = {
   // --- Update ---
   getUpdateVersion: () => apiClient.get("/api/update/version"),
   getUpdateCheck: () => apiClient.get("/api/update/check"),
-  getUpdateApply: () => apiClient.get("/api/update/apply"),
+  applyUpdate: () => apiClient.post("/api/update/apply"),
 
   // --- 🕒 Timezone ---
   /** Ottiene la timezone attuale dal Raspberry Pi */

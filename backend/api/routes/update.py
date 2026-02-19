@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+import time
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from backend.core.state import controllers
 
 router = APIRouter()
@@ -18,9 +19,17 @@ def check_updates():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/apply")
-def apply_update():
+def _deferred_reboot():
+    """Attende che la risposta HTTP venga inviata, poi riavvia"""
+    time.sleep(3)
+    update.schedule_reboot()
+
+@router.post("/apply")
+def apply_update(background_tasks: BackgroundTasks):
     try:
-        return {"updateApplied": update.full_update()}
+        result = update.full_update()
+        if result.get("reboot"):
+            background_tasks.add_task(_deferred_reboot)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
