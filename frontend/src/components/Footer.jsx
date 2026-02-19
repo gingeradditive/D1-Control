@@ -1,9 +1,47 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Switch, styled, Select, MenuItem, FormControl } from "@mui/material";
-import WaterDropIcon from "@mui/icons-material/WaterDrop";
+import { Box, Typography, Switch, styled, Button, keyframes } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
-import DewPointIcon from '@mui/icons-material/DewPoint';
 import CheckLight from './CheckLight';
+
+const marqueeScroll = keyframes`
+  0% { transform: translateX(0%); }
+  50% { transform: translateX(-100%); }
+  100% { transform: translateX(0%); }
+`;
+
+function MarqueeText({ text, maxChars = 8 }) {
+  const needsMarquee = text.length > maxChars;
+  return (
+    <Box
+      sx={{
+        overflow: 'hidden',
+        width: 88,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: needsMarquee ? 'flex-start' : 'center',
+        position: 'relative',
+      }}
+    >
+      <Typography
+        variant="caption"
+        noWrap
+        sx={{
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          lineHeight: 1.2,
+          whiteSpace: 'nowrap',
+          ...(needsMarquee && {
+            animation: `${marqueeScroll} 24s linear infinite`,
+            display: 'inline-block',
+            minWidth: 'max-content',
+          }),
+        }}
+      >
+        {text}
+      </Typography>
+    </Box>
+  );
+}
 
 const StyledSwitch = styled(Switch)(({ theme }) => ({
   width: 56.5,
@@ -33,7 +71,7 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
   },
 }));
 
-export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusChange, heater, fan, valve, presets = [], activePresetId, onPresetSelect }) {
+export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusChange, heater, fan, valve, presets = [], pinnedPresetIds = [], activePresetId, onPresetSelect }) {
   const [checked, setChecked] = useState(status);
 
   // Sync internal state with external prop
@@ -56,29 +94,48 @@ export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusCh
       borderRadius={2}
       mt={2}
     >
-      <Box display="flex" alignItems="center">
-        {presets.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select
-              value={activePresetId || ''}
-              onChange={(e) => {
-                const preset = presets.find(p => p.id === e.target.value);
-                if (preset) onPresetSelect(preset);
+      <Box display="flex" alignItems="center" gap={0.75}>
+        {pinnedPresetIds
+          .map(id => presets.find(p => p.id === id))
+          .filter(Boolean)
+          .map((preset) => (
+            <Button
+              key={preset.id}
+              variant={activePresetId === preset.id ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => onPresetSelect(preset)}
+              disabled={!status}
+              sx={{
+                borderRadius: '20px',
+                minWidth: 104,
+                maxWidth: 104,
+                height: 34,
+                px: 1,
+                textTransform: 'none',
+                border: '1px solid #ccc',
+                color: '#000',
+                bgcolor: '#fff',
+                boxShadow: 'none',
+                '&:hover': {
+                  border: '1px solid #ccc',
+                  bgcolor: '#f5f5f5',
+                  boxShadow: 'none',
+                },
+                ...(activePresetId === preset.id
+                  ? { bgcolor: 'rgb(215, 46, 40)', color: '#fff', border: '1px solid rgb(215, 46, 40)', '&:hover': { bgcolor: 'rgb(185, 36, 30)', border: '1px solid rgb(185, 36, 30)' } }
+                  : {}
+                ),
+                '&.Mui-disabled': {
+                  borderColor: '#fff',
+                  color: '#fff',
+                  bgcolor: 'transparent',
+                  boxShadow: 'none',
+                },
               }}
-              displayEmpty
-              sx={{ fontSize: '0.85rem', height: 36 }}
             >
-              <MenuItem value="" disabled>
-                <em>Use Preset</em>
-              </MenuItem>
-              {presets.map((preset) => (
-                <MenuItem key={preset.id} value={preset.id}>
-                  {preset.name} ({preset.temperature}°C)
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
+              <MarqueeText text={preset.name} />
+            </Button>
+          ))}
       </Box>
       <Box position="relative" display="flex" justifyContent="end" alignItems="center"> 
         <CheckLight

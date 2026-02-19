@@ -15,6 +15,17 @@ export default function App() {
   const [showBackButton, setShowBackButton] = useState(false);
   const [presetsVersion, setPresetsVersion] = useState(0);
   const handlePresetSaved = () => setPresetsVersion(v => v + 1);
+
+  const [pinnedPresetIds, setPinnedPresetIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pinnedPresetIds')) || [];
+    } catch { return []; }
+  });
+
+  const handlePinnedChange = (ids) => {
+    setPinnedPresetIds(ids);
+    localStorage.setItem('pinnedPresetIds', JSON.stringify(ids));
+  };
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
 
   useEffect(() => {
@@ -86,8 +97,8 @@ export default function App() {
               zIndex: 1,
             }}
           >
-            <Header onPresetSaved={handlePresetSaved} />
-            <StatusManager presetsVersion={presetsVersion} />
+            <Header onPresetSaved={handlePresetSaved} pinnedPresetIds={pinnedPresetIds} onPinnedChange={handlePinnedChange} />
+            <StatusManager presetsVersion={presetsVersion} pinnedPresetIds={pinnedPresetIds} />
           </Container>
 
           {/* Logo cliccabile */}

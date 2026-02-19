@@ -3,7 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Typography, Box, IconButton, TextField,
   List, ListItem, ListItemText, ListItemSecondaryAction,
-  CircularProgress, Chip, Divider
+  CircularProgress, Chip, Divider, Tooltip
 } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -12,10 +12,25 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import LockIcon from '@mui/icons-material/Lock';
+import PushPinIcon from '@mui/icons-material/PushPin';
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import { api } from '../api';
 import { useKeyboard } from '../KeyboardContext';
 
-export default function PresetsDialog({ open, onClose, onPresetSaved }) {
+export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPresetIds = [], onPinnedChange }) {
+  const MAX_PINNED = 3;
+
+  const handleTogglePin = (presetId) => {
+    const isPinned = pinnedPresetIds.includes(presetId);
+    let newPinned;
+    if (isPinned) {
+      newPinned = pinnedPresetIds.filter(id => id !== presetId);
+    } else {
+      if (pinnedPresetIds.length >= MAX_PINNED) return;
+      newPinned = [...pinnedPresetIds, presetId];
+    }
+    onPinnedChange?.(newPinned);
+  };
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
   const { openKeyboard } = useKeyboard();
 
@@ -184,26 +199,42 @@ export default function PresetsDialog({ open, onClose, onPresetSaved }) {
                     }
                     secondary={`${preset.temperature}°C`}
                   />
-                  {!preset.builtin && (
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleStartEdit(preset)}
-                        size="small"
-                        sx={{ mr: 0.5 }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleDelete(preset.id)}
-                        size="small"
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  )}
+                  <ListItemSecondaryAction>
+                    <Tooltip title={pinnedPresetIds.includes(preset.id) ? 'Unpin' : (pinnedPresetIds.length >= MAX_PINNED ? 'Max 3 pinned' : 'Pin to footer')}>
+                      <span>
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleTogglePin(preset.id)}
+                          size="small"
+                          sx={{ mr: 0.5 }}
+                          disabled={!pinnedPresetIds.includes(preset.id) && pinnedPresetIds.length >= MAX_PINNED}
+                          color={pinnedPresetIds.includes(preset.id) ? 'primary' : 'default'}
+                        >
+                          {pinnedPresetIds.includes(preset.id) ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    {!preset.builtin && (
+                      <>
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleStartEdit(preset)}
+                          size="small"
+                          sx={{ mr: 0.5 }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleDelete(preset.id)}
+                          size="small"
+                          color="error"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </>
+                    )}
+                  </ListItemSecondaryAction>
                 </ListItem>
               )}
               <Divider component="li" />

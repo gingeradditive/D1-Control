@@ -8,7 +8,7 @@ import ScreensaverOverlay from './ScreensaverOverlay';
 import { useSnackbar } from 'notistack';
 import CloseIcon from '@mui/icons-material/Close';
 
-export default function StatusManager({ presetsVersion }) {
+export default function StatusManager({ presetsVersion, pinnedPresetIds = [] }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
 
   const [isScreensaverActive, setIsScreensaverActive] = useState(false);
@@ -258,6 +258,7 @@ export default function StatusManager({ presetsVersion }) {
         valve={status.valve}
         onStatusChange={handleStatusChange}
         presets={presets}
+        pinnedPresetIds={pinnedPresetIds}
         activePresetId={activePresetId}
         onPresetSelect={handlePresetSelect}
       />

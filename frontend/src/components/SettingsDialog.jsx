@@ -31,6 +31,8 @@ export default function SettingsDialog({
   keysToShow = null,
   titlesMap = {},
   onPresetSaved,
+  pinnedPresetIds = [],
+  onPinnedChange,
 }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
   const { openKeyboard } = useKeyboard();
@@ -348,6 +350,8 @@ export default function SettingsDialog({
         open={showPresetsDialog}
         onClose={() => setShowPresetsDialog(false)}
         onPresetSaved={onPresetSaved}
+        pinnedPresetIds={pinnedPresetIds}
+        onPinnedChange={onPinnedChange}
       />
 
       {/* Confirm Factory Reset Dialog */}
