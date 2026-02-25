@@ -163,7 +163,6 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                       onChange={e => !isKiosk && setEditName(e.target.value)}
                       size="small"
                       sx={{ flex: 1 }}
-                      onFocus={() => isKiosk && openKeyboard(editName, 'default', val => setEditName(val))}
                       onClick={() => isKiosk && openKeyboard(editName, 'default', val => setEditName(val))}
                     />
                     <TextField
@@ -174,7 +173,6 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                       size="small"
                       sx={{ width: 100 }}
                       InputProps={{ inputProps: { min: 0, max: 70, step: 5 } }}
-                      onFocus={() => isKiosk && openKeyboard(editTemp, 'numeric', val => setEditTemp(val))}
                       onClick={() => isKiosk && openKeyboard(editTemp, 'numeric', val => setEditTemp(val))}
                     />
                     <IconButton color="primary" onClick={handleSaveEdit} size="small">
@@ -258,7 +256,6 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                   size="small"
                   sx={{ flex: 1 }}
                   autoFocus
-                  onFocus={() => isKiosk && openKeyboard(editName, 'default', val => setEditName(val))}
                   onClick={() => isKiosk && openKeyboard(editName, 'default', val => setEditName(val))}
                 />
                 <TextField
@@ -269,7 +266,6 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                   size="small"
                   sx={{ width: 100 }}
                   InputProps={{ inputProps: { min: 0, max: 70, step: 5 } }}
-                  onFocus={() => isKiosk && openKeyboard(editTemp, 'numeric', val => setEditTemp(val))}
                   onClick={() => isKiosk && openKeyboard(editTemp, 'numeric', val => setEditTemp(val))}
                 />
                 <IconButton color="primary" onClick={handleSaveEdit} size="small">
