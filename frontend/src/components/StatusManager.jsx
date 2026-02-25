@@ -121,7 +121,21 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [] }) 
         if (response.data.updateAvailable && !updateSnackbarRef.current) {
           const id = enqueueSnackbar(
             "Update available! Please open settings and update the Dryer.",
-            { variant: "info", persist: true }
+            {
+              variant: "info",
+              persist: true,
+              action: (snackbarId) => (
+                <IconButton
+                  onClick={() => {
+                    closeSnackbar(snackbarId);
+                    updateSnackbarRef.current = null;
+                  }}
+                  size="small"
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )
+            }
           );
           updateSnackbarRef.current = id;
         }
