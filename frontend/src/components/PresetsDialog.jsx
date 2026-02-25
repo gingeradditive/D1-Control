@@ -95,7 +95,10 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
           handleCancelEdit();
           onPresetSaved?.();
         })
-        .catch((err) => { console.error("Create preset error:", err); setError('Failed to create preset.'); });
+        .catch((err) => {
+          const msg = err?.response?.data?.detail;
+          setError(msg || 'Failed to create preset.');
+        });
     } else {
       api.updatePreset(editingId, { name: editName.trim(), temperature: temp })
         .then(() => {
@@ -103,7 +106,10 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
           handleCancelEdit();
           onPresetSaved?.();
         })
-        .catch(() => setError('Failed to update preset.'));
+        .catch((err) => {
+          const msg = err?.response?.data?.detail;
+          setError(msg || 'Failed to update preset.');
+        });
     }
   };
 

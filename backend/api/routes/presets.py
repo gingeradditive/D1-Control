@@ -66,6 +66,9 @@ def get_all_presets():
 def create_preset(preset: PresetCreate):
     if preset.temperature < TEMP_MIN or preset.temperature > TEMP_MAX:
         raise HTTPException(status_code=400, detail=f"Temperature must be between {TEMP_MIN} and {TEMP_MAX}°C")
+    all_presets = HARDCODED_PRESETS + _read_user_presets()
+    if any(p["name"].strip().lower() == preset.name.strip().lower() for p in all_presets):
+        raise HTTPException(status_code=409, detail=f"A preset named '{preset.name}' already exists")
     user_presets = _read_user_presets()
     new_preset = {
         "id": str(uuid.uuid4())[:8],
@@ -92,6 +95,9 @@ def update_preset(preset_id: str, preset: PresetUpdate):
     for p in user_presets:
         if p["id"] == preset_id:
             if preset.name is not None:
+                all_presets = HARDCODED_PRESETS + user_presets
+                if any(p2["name"].strip().lower() == preset.name.strip().lower() and p2["id"] != preset_id for p2 in all_presets):
+                    raise HTTPException(status_code=409, detail=f"A preset named '{preset.name}' already exists")
                 p["name"] = preset.name
             if preset.temperature is not None:
                 p["temperature"] = preset.temperature
