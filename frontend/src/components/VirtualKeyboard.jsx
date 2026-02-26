@@ -151,7 +151,7 @@ export default function VirtualKeyboard() {
           keyboardRef={r => (keyboardRef.current = r)}
           onChange={handleChange}
           onKeyPress={handleKeyPress}
-          layoutName={layoutName}
+          layoutName={keyboardType === 'numeric' ? 'default' : layoutName}
           layout={keyboardType === 'numeric' ? numericLayout : androidStyleLayouts}
           display={{
             '{bksp}': '⌫',
