@@ -53,6 +53,13 @@ export default function VirtualKeyboard() {
   };
 
   useEffect(() => {
+    if (isOpen) {
+      setLayoutName('default');
+      setLocalValue(currentValue);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     setLocalValue(currentValue);
     if (keyboardRef.current) {
       keyboardRef.current.setInput(currentValue);
