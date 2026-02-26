@@ -37,7 +37,7 @@ export default function WifiConnectDialog({ network, onClose, onSuccess }) {
       <DialogContent>
         <TextField
           fullWidth
-          type="password"
+          type="text"
           label="Password"
           margin="normal"
           value={password}
