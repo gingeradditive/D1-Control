@@ -8,8 +8,9 @@ network = controllers["network"]
 def get_networks():
     return network.get_networks()
 
-@router.post("/{ssid}/{password}")
-def connect(ssid: str, password: str):
+@router.post("/{ssid}/password")
+def connect(ssid: str, request: dict):
+    password = request.get("password")
     if not ssid or not password:
         raise HTTPException(status_code=400, detail="SSID and password required")
     success = network.connect_to_network(ssid, password)
