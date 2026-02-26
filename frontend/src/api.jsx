@@ -20,7 +20,7 @@ export const api = {
 
   // --- Network ---
   getConnection: () => apiClient.get("/api/network"),
-  setConnection: (ssid, password) => apiClient.post(`/api/network/${ssid}/password`, { password }),
+  setConnection: (ssid, password) => apiClient.post("/api/network/connect", { ssid, password }),
   getConnectionStatus: () => apiClient.get("/api/network/status"),
   getconnectionG1OS: () => apiClient.get("/api/network/g1os"),
   setConnectionForget: () => apiClient.post("/api/network/forget"),
