@@ -17,6 +17,7 @@ export default function WifiConnectDialog({ network, onClose, onSuccess }) {
   const handleConnect = async () => {
     try {
       setStatusMessage('Connecting...');
+      console.log('Sending password:', password); // Debug log
       const res = await api.setConnection(network.ssid, password);
       setStatusMessage(res.data.message);
       if (res.data.status === "Success") onSuccess();

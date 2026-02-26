@@ -1,5 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from backend.core.state import controllers
+from pydantic import BaseModel
+
+class PasswordRequest(BaseModel):
+    password: str
 
 router = APIRouter()
 network = controllers["network"]
@@ -9,8 +13,9 @@ def get_networks():
     return network.get_networks()
 
 @router.post("/{ssid}/password")
-def connect(ssid: str, request: dict):
-    password = request.get("password")
+def connect(ssid: str, request: PasswordRequest):
+    password = request.password
+    print(f"[DEBUG] Received password: '{password}' for SSID: '{ssid}'")  # Debug log
     if not ssid or not password:
         raise HTTPException(status_code=400, detail="SSID and password required")
     success = network.connect_to_network(ssid, password)
