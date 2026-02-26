@@ -26,7 +26,9 @@ export default function App() {
     setPinnedPresetIds(ids);
     localStorage.setItem('pinnedPresetIds', JSON.stringify(ids));
   };
-  const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
+  const params = new URLSearchParams(window.location.search);
+  const isKiosk = params.get("kiosk") === "true";
+  const showCursor = params.get("cursor") === "true";
 
   useEffect(() => {
     const checkG1OS = async () => {
@@ -72,7 +74,7 @@ export default function App() {
   return (
     <SnackbarProvider maxSnack={15} autoHideDuration={null} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
       <KeyboardProvider>
-        {isKiosk && (
+        {isKiosk && !showCursor && (
           <style>{`* { cursor: none !important; }`}</style>
         )}
 
