@@ -1,6 +1,13 @@
 import { Box, Typography } from "@mui/material";
 
-export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
+function formatElapsed(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export default function TemperatureDisplay({ currentTemp, setpoint, status, dryingElapsedSeconds }) {
   // Colori condizionati dallo status
   const ringColor = status ? "#d72e28" : "#ccc";
   const animated = status;
@@ -20,10 +27,10 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
         <Box
           sx={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
+            top: -2,
+            left: -2,
+            width: "calc(100% + 4px)",
+            height: "calc(100% + 4px)",
             border: `1px dashed ${ringColor}`,
             borderRadius: "50%",
             animation: animated ? "pulse1 9s ease-in-out infinite" : "none",
@@ -32,10 +39,10 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
         <Box
           sx={{
             position: "absolute",
-            top: 7,
-            left: 7,
-            width: 185,
-            height: 185,
+            top: 6,
+            left: 6,
+            width: 187,
+            height: 187,
             border: `2px dotted ${ringColor}`,
             borderRadius: "50%",
             animation: animated ? "pulse2 6s ease-in-out infinite" : "none",
@@ -44,10 +51,10 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
         <Box
           sx={{
             position: "absolute",
-            top: 15,
-            left: 15,
-            width: 170,
-            height: 170,
+            top: 14,
+            left: 14,
+            width: 172,
+            height: 172,
             border: `2px solid ${ringColor}`,
             borderRadius: "50%",
             animation: animated ? "pulse3 3s ease-in-out infinite" : "none",
@@ -68,12 +75,17 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
             justifyContent: "center",
           }}
         >
-          <Typography variant="h2" pl={3}>
-            {currentTemp !== null ? `${currentTemp}°` : "--"}
+          <Typography variant="h2" pl={3} className="temperature-degree">
+            {currentTemp !== null ? `${currentTemp}` : "--"}
           </Typography>
-          <Typography variant="body2" color="gray">
-            Set {setpoint !== null ? `${setpoint}°` : ""}
+          <Typography variant="body2" color="gray" className="temperature-degree">
+            Set {setpoint !== null ? `${setpoint}` : ""}
           </Typography>
+          {status && dryingElapsedSeconds > 0 && (
+            <Typography variant="caption" color="gray" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+              {formatElapsed(dryingElapsedSeconds)}
+            </Typography>
+          )}
         </Box>
       </Box>
 
@@ -90,6 +102,13 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status }) {
         @keyframes pulse3 {
           0%, 100% { transform: scale(1);}
           50% { transform: scale(1.02); }
+        }
+        .temperature-degree::after {
+          content: "°";
+          font-size: 0.8em;
+          vertical-align: baseline;
+          position: relative;
+          top: -0.2em;
         }
       `}</style>
     </Box>

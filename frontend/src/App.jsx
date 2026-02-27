@@ -4,38 +4,31 @@ import Header from './components/Header';
 import StatusManager from './components/StatusManager';
 import DateTimeDisplay from './components/DateTimeDisplay';
 import BackButton from './components/BackButton';
-import DevDialog from './components/DevDialog';
 import './App.css';
 import { api } from './api';
 import "react-simple-keyboard/build/css/index.css";
 import { KeyboardProvider } from './KeyboardContext';
 import VirtualKeyboard from './components/VirtualKeyboard';
 import { SnackbarProvider } from 'notistack';
-import { jsx } from 'react/jsx-runtime';
 
 export default function App() {
   const [showBackButton, setShowBackButton] = useState(false);
-  const [showDevDialog, setShowDevDialog] = useState(false); // ⬅️ stato nuovo
-  const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
+  const [presetsVersion, setPresetsVersion] = useState(0);
+  const handlePresetSaved = () => setPresetsVersion(v => v + 1);
 
-  // 👇 Contatore dei click veloci sul logo
-  const clickCountRef = useRef(0);
-  const lastClickTimeRef = useRef(0);
+  const [pinnedPresetIds, setPinnedPresetIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pinnedPresetIds')) || [];
+    } catch { return []; }
+  });
 
-  const handleLogoClick = () => {
-    const now = Date.now();
-    if (now - lastClickTimeRef.current > 2000) {
-      clickCountRef.current = 1; // reset se troppo lento
-    } else {
-      clickCountRef.current += 1;
-    }
-    lastClickTimeRef.current = now;
-
-    if (clickCountRef.current >= 5) {
-      setShowDevDialog(true);
-      clickCountRef.current = 0; // resetta dopo apertura
-    }
+  const handlePinnedChange = (ids) => {
+    setPinnedPresetIds(ids);
+    localStorage.setItem('pinnedPresetIds', JSON.stringify(ids));
   };
+  const params = new URLSearchParams(window.location.search);
+  const isKiosk = params.get("kiosk") === "true";
+  const showCursor = params.get("cursor") === "true";
 
   useEffect(() => {
     const checkG1OS = async () => {
@@ -66,11 +59,14 @@ export default function App() {
         }
       };
       const preventWheel = (e) => { if (e.ctrlKey) e.preventDefault(); };
+      const preventPinch = (e) => { if (e.touches.length > 1) e.preventDefault(); };
       document.addEventListener("keydown", preventZoom, { passive: false });
       document.addEventListener("wheel", preventWheel, { passive: false });
+      document.addEventListener("touchmove", preventPinch, { passive: false });
       return () => {
         document.removeEventListener("keydown", preventZoom);
         document.removeEventListener("wheel", preventWheel);
+        document.removeEventListener("touchmove", preventPinch);
       };
     }
   }, [isKiosk]);
@@ -78,7 +74,7 @@ export default function App() {
   return (
     <SnackbarProvider maxSnack={15} autoHideDuration={null} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
       <KeyboardProvider>
-        {isKiosk && (
+        {isKiosk && !showCursor && (
           <style>{`* { cursor: none !important; }`}</style>
         )}
 
@@ -103,8 +99,8 @@ export default function App() {
               zIndex: 1,
             }}
           >
-            <Header />
-            <StatusManager />
+            <Header onPresetSaved={handlePresetSaved} pinnedPresetIds={pinnedPresetIds} onPinnedChange={handlePinnedChange} />
+            <StatusManager presetsVersion={presetsVersion} pinnedPresetIds={pinnedPresetIds} />
           </Container>
 
           {/* Logo cliccabile */}
@@ -112,7 +108,6 @@ export default function App() {
             component="img"
             src="/Logo_ginger.svg"
             alt="Logo Ginger"
-            onClick={handleLogoClick}
             sx={{
               position: 'fixed',
               bottom: 16,
@@ -122,9 +117,6 @@ export default function App() {
               height: 'auto',
               opacity: 0.7,
               zIndex: 10,
-              cursor: 'pointer',
-              transition: 'opacity 0.2s',
-              '&:active': { opacity: 1 },
             }}
           />
 
@@ -137,8 +129,6 @@ export default function App() {
 
         <VirtualKeyboard />
 
-        {/* Pannello sviluppatore */}
-        {showDevDialog && <DevDialog open={showDevDialog} onClose={() => setShowDevDialog(false)} />}
       </KeyboardProvider>
     </SnackbarProvider>
   );

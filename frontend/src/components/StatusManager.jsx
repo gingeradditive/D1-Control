@@ -8,7 +8,7 @@ import ScreensaverOverlay from './ScreensaverOverlay';
 import { useSnackbar } from 'notistack';
 import CloseIcon from '@mui/icons-material/Close';
 
-export default function StatusManager() {
+export default function StatusManager({ presetsVersion, pinnedPresetIds = [] }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
 
   const [isScreensaverActive, setIsScreensaverActive] = useState(false);
@@ -18,6 +18,10 @@ export default function StatusManager() {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const activeErrorsRef = useRef(new Map()); // description_date → snackbarId
   const updateSnackbarRef = useRef(null);   // unico toast per update disponibile
+  const filterAlertRef = useRef(null);      // toast for filter cleaning alert
+
+  const [presets, setPresets] = useState([]);
+  const [activePresetId, setActivePresetId] = useState(null);
 
   const [status, setStatus] = useState({
     current_temp: null,
@@ -28,7 +32,8 @@ export default function StatusManager() {
     fan: false,
     status: false,
     valve: false,
-    errors: {}
+    errors: {},
+    drying_elapsed_seconds: 0,
   });
 
   // Mostra toast per nuovi errori
@@ -72,6 +77,17 @@ export default function StatusManager() {
     });
   }, [status.errors, enqueueSnackbar, closeSnackbar]);
 
+  // Fetch presets
+  const fetchPresets = () => {
+    api.getPresets()
+      .then(res => setPresets(res.data))
+      .catch(err => console.error("Error fetching presets:", err));
+  };
+
+  useEffect(() => {
+    fetchPresets();
+  }, [presetsVersion]);
+
   // Fetch configurazione timeout
   useEffect(() => {
     const fetchTimeout = async () => {
@@ -105,7 +121,21 @@ export default function StatusManager() {
         if (response.data.updateAvailable && !updateSnackbarRef.current) {
           const id = enqueueSnackbar(
             "Update available! Please open settings and update the Dryer.",
-            { variant: "info", persist: true }
+            {
+              variant: "info",
+              persist: true,
+              action: (snackbarId) => (
+                <IconButton
+                  onClick={() => {
+                    closeSnackbar(snackbarId);
+                    updateSnackbarRef.current = null;
+                  }}
+                  size="small"
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )
+            }
           );
           updateSnackbarRef.current = id;
         }
@@ -116,6 +146,47 @@ export default function StatusManager() {
 
     checkUpdate();
   }, [enqueueSnackbar]);
+
+  // Filter cleaning alert
+  useEffect(() => {
+    const FILTER_MAX_HOURS = 500;
+    const checkFilter = async () => {
+      try {
+        const response = await api.getStats();
+        const filterHours = response.data?.dryer?.filter_hours ?? 0;
+        if (filterHours >= FILTER_MAX_HOURS && !filterAlertRef.current) {
+          const id = enqueueSnackbar(
+            `Filter cleaning required! (${Math.floor(filterHours)}h / ${FILTER_MAX_HOURS}h). Reset counter in Statistics dialog.`,
+            {
+              variant: "warning",
+              persist: true,
+              action: (snackbarId) => (
+                <IconButton
+                  onClick={() => {
+                    closeSnackbar(snackbarId);
+                    filterAlertRef.current = null;
+                  }}
+                  size="small"
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )
+            }
+          );
+          filterAlertRef.current = id;
+        } else if (filterHours < FILTER_MAX_HOURS && filterAlertRef.current) {
+          closeSnackbar(filterAlertRef.current);
+          filterAlertRef.current = null;
+        }
+      } catch (error) {
+        console.error("Error checking filter hours:", error);
+      }
+    };
+
+    checkFilter();
+    const interval = setInterval(checkFilter, 60000);
+    return () => clearInterval(interval);
+  }, [enqueueSnackbar, closeSnackbar]);
 
   // Event handler per interazione utente
   const resetTimer = () => {
@@ -147,6 +218,7 @@ export default function StatusManager() {
   const handleIncrease = () => {
     let newSet = Math.min(status.setpoint + 5, 70);
     api.setPoint(newSet);
+    setActivePresetId(null);
     api.getStatus()
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
@@ -155,6 +227,15 @@ export default function StatusManager() {
   const handleDecrease = () => {
     let newSet = Math.max(status.setpoint - 5, 0);
     api.setPoint(newSet);
+    setActivePresetId(null);
+    api.getStatus()
+      .then(res => setStatus(res.data))
+      .catch(err => console.error("Errore nel fetch /status:", err));
+  };
+
+  const handlePresetSelect = (preset) => {
+    api.setPoint(preset.temperature);
+    setActivePresetId(preset.id);
     api.getStatus()
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
@@ -176,6 +257,7 @@ export default function StatusManager() {
           currentTemp={status.current_temp}
           setpoint={status.setpoint}
           status={status.status}
+          dryingElapsedSeconds={status.drying_elapsed_seconds}
         />
         <Controls direction="up" onClick={handleIncrease} />
       </Box>
@@ -189,6 +271,10 @@ export default function StatusManager() {
         fan={status.fan}
         valve={status.valve}
         onStatusChange={handleStatusChange}
+        presets={presets}
+        pinnedPresetIds={pinnedPresetIds}
+        activePresetId={activePresetId}
+        onPresetSelect={handlePresetSelect}
       />
 
       {isKiosk && isScreensaverActive && (

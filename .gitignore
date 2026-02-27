@@ -37,3 +37,4 @@ venv.bak/
 # GingerDryer specific
 setpoint.txt
 config.json
+presets.json

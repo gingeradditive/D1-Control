@@ -53,6 +53,13 @@ export default function VirtualKeyboard() {
   };
 
   useEffect(() => {
+    if (isOpen) {
+      setLayoutName('default');
+      setLocalValue(currentValue);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     setLocalValue(currentValue);
     if (keyboardRef.current) {
       keyboardRef.current.setInput(currentValue);
@@ -74,6 +81,7 @@ export default function VirtualKeyboard() {
       const newVal = localValue.slice(0, -1);
       setLocalValue(newVal);
       keyboardRef.current.setInput(newVal);
+      updateValue?.(newVal);
     }
 
     if (button === '{lock}') {
@@ -143,7 +151,7 @@ export default function VirtualKeyboard() {
           keyboardRef={r => (keyboardRef.current = r)}
           onChange={handleChange}
           onKeyPress={handleKeyPress}
-          layoutName={layoutName}
+          layoutName={keyboardType === 'numeric' ? 'default' : layoutName}
           layout={keyboardType === 'numeric' ? numericLayout : androidStyleLayouts}
           display={{
             '{bksp}': '⌫',

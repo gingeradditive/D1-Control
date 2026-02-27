@@ -1,8 +1,17 @@
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 FRONTEND = "http://localhost:5173"
 BACKEND = "http://localhost:8000"

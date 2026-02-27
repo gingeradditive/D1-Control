@@ -6,9 +6,24 @@ export DEBIAN_FRONTEND=noninteractive
 echo "=== 🛠️ INSTALLAZIONE SISTEMA KIOSK ==="
 
 PROJECT_DIR=$(pwd)
-USERNAME=$(whoami)
+USERNAME="pi"
 
-echo "📦 Aggiorno sistema e installo pacchetti base..."
+echo "� Creo utente 'pi' con password 'raspberry'..."
+if ! id "$USERNAME" &>/dev/null; then
+    sudo useradd -m -s /bin/bash "$USERNAME"
+    echo "$USERNAME:raspberry" | sudo chpasswd
+    sudo usermod -aG sudo "$USERNAME"
+    echo "✅ Utente '$USERNAME' creato con successo"
+else
+    echo "ℹ️ Utente '$USERNAME' già esistente, aggiorno password..."
+    echo "$USERNAME:raspberry" | sudo chpasswd
+fi
+
+echo "👤 Aggiungo '$USERNAME' al gruppo autologin..."
+sudo groupadd -f autologin
+sudo usermod -aG autologin "$USERNAME"
+
+echo "�📦 Aggiorno sistema e installo pacchetti base..."
 sudo apt-get update -y
 sudo apt-get upgrade -y
 
@@ -43,6 +58,7 @@ sudo tee /etc/lightdm/lightdm.conf > /dev/null <<EOF
 [Seat:*]
 autologin-user=$USERNAME
 autologin-user-timeout=0
+autologin-session=openbox
 user-session=openbox
 EOF
 
@@ -52,6 +68,7 @@ sudo tee /etc/lightdm/lightdm.conf.d/50-autologin.conf >/dev/null <<EOF
 [Seat:*]
 autologin-user=$USERNAME
 autologin-user-timeout=0
+autologin-session=openbox
 user-session=openbox
 EOF
 

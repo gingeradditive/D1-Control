@@ -8,13 +8,16 @@ import SignalWifi3BarIcon from '@mui/icons-material/SignalWifi3Bar';
 import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 
 import SettingsIcon from '@mui/icons-material/Settings';
-import AreaChartIcon from '@mui/icons-material/AreaChart';
+import EqualizerIcon from '@mui/icons-material/Equalizer';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 // import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
 
 import WifiDialog from './WifiDialog';
 import AlarmDialog from './AlarmDialog';
 import ChartDialog from './ChartDialog';
 import SettingsDialog from './SettingsDialog';
+import StatsDialog from './StatsDialog';
 
 import { api } from '../api'; // Assicurati che l'import sia corretto
 
@@ -24,7 +27,7 @@ const mockChartData = Array.from({ length: 10 }, (_, i) => ({
   humidity: 50 + i * 2,
 }));
 
-export default function Header() {
+export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange }) {
   const [openModal, setOpenModal] = useState(null);
   const [range, setRange] = useState('1h');
   const [network, setNetwork] = useState({
@@ -104,7 +107,8 @@ export default function Header() {
           {/* <IconButton onClick={handleOpen('alarm')}><AccessAlarmIcon /></IconButton> */}
         </Box>
         <Box display="flex" alignItems="center">
-          <IconButton onClick={handleOpen('chart')}><AreaChartIcon /></IconButton>
+          <IconButton onClick={handleOpen('chart')}><TimelineIcon /></IconButton>
+          <IconButton onClick={handleOpen('stats')}><EqualizerIcon /></IconButton>
           <IconButton onClick={handleOpen('settings')}><SettingsIcon /></IconButton>
         </Box>
       </Box>
@@ -132,6 +136,14 @@ export default function Header() {
         onClose={handleClose}
         keysToShow={keysToShow}
         titlesMap={titlesMap}
+        onPresetSaved={onPresetSaved}
+        pinnedPresetIds={pinnedPresetIds}
+        onPinnedChange={onPinnedChange}
+      />
+
+      <StatsDialog
+        open={openModal === 'stats'}
+        onClose={handleClose}
       />
     </>
   );

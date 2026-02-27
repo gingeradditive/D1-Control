@@ -53,10 +53,6 @@ export default function WifiListDialog({ open, onClose }) {
   useEffect(() => {
     if (open) {
       fetchWifiData();
-
-      // refresh automatico ogni 10 secondi
-      const interval = setInterval(fetchWifiData, 10000);
-      return () => clearInterval(interval);
     }
   }, [open]);
 

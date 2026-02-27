@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BASE_URL = `${window.location.protocol}//${window.location.hostname}`;
+const BASE_URL = import.meta.env.DEV 
+  ? `${window.location.protocol}//${window.location.hostname}:3000`
+  : `${window.location.protocol}//${window.location.hostname}`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -18,7 +20,7 @@ export const api = {
 
   // --- Network ---
   getConnection: () => apiClient.get("/api/network"),
-  setConnection: (ssid, password) => apiClient.post(`/api/network/${ssid}/${password}`),
+  setConnection: (ssid, password) => apiClient.post("/api/network/connect", { ssid, password }),
   getConnectionStatus: () => apiClient.get("/api/network/status"),
   getconnectionG1OS: () => apiClient.get("/api/network/g1os"),
   setConnectionForget: () => apiClient.post("/api/network/forget"),
@@ -27,7 +29,7 @@ export const api = {
   getConfigurations: () => apiClient.get("/api/config"),
   setConfiguration: (key, value) =>
     apiClient.post(
-      "/config/set",
+      "/api/config/set",
       new URLSearchParams({ key, value }).toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     ),
@@ -37,10 +39,14 @@ export const api = {
   /** 🔄 Factory Reset Config */
   resetConfigurations: () => apiClient.post("/api/config/reset"),
 
+  // --- Stats ---
+  getStats: () => apiClient.get("/api/stats"),
+  resetFilterHours: () => apiClient.post("/api/dryer/filter/reset"),
+
   // --- Update ---
   getUpdateVersion: () => apiClient.get("/api/update/version"),
   getUpdateCheck: () => apiClient.get("/api/update/check"),
-  getUpdateApply: () => apiClient.get("/api/update/apply"),
+  applyUpdate: () => apiClient.post("/api/update/apply"),
 
   // --- 🕒 Timezone ---
   /** Ottiene la timezone attuale dal Raspberry Pi */
@@ -53,4 +59,11 @@ export const api = {
       new URLSearchParams({ timezone }).toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     ),
+
+  // --- Presets ---
+  getPresets: () => apiClient.get("/api/presets/"),
+  createPreset: (name, temperature) =>
+    apiClient.post("/api/presets/", { name, temperature }),
+  updatePreset: (id, data) => apiClient.put(`/api/presets/${id}`, data),
+  deletePreset: (id) => apiClient.delete(`/api/presets/${id}`),
 };

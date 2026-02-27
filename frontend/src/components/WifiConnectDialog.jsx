@@ -14,6 +14,10 @@ export default function WifiConnectDialog({ network, onClose, onSuccess }) {
   const [statusMessage, setStatusMessage] = useState('');
   const { openKeyboard } = useKeyboard();
 
+  const handleKeyboardSubmit = (value) => {
+    setPassword(value);
+  };
+
   const handleConnect = async () => {
     try {
       setStatusMessage('Connecting...');
@@ -37,13 +41,13 @@ export default function WifiConnectDialog({ network, onClose, onSuccess }) {
       <DialogContent>
         <TextField
           fullWidth
-          type="password"
+          type="text"
           label="Password"
           margin="normal"
           value={password}
           onChange={(e) => !isKiosk && setPassword(e.target.value)}
-          onFocus={() => isKiosk && openKeyboard(password, setPassword)}
-          onClick={() => isKiosk && openKeyboard(password, setPassword)}
+          onFocus={() => isKiosk && openKeyboard(password, 'text', handleKeyboardSubmit)}
+          onClick={() => isKiosk && openKeyboard(password, 'text', handleKeyboardSubmit)}
           InputProps={{ readOnly: isKiosk }}
         />
         {statusMessage && (
