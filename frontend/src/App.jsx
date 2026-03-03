@@ -6,7 +6,6 @@ import DateTimeDisplay from './components/DateTimeDisplay';
 import BackButton from './components/BackButton';
 import './App.css';
 import { api } from './api';
-import "react-simple-keyboard/build/css/index.css";
 import { KeyboardProvider } from './KeyboardContext';
 import VirtualKeyboard from './components/VirtualKeyboard';
 import { SnackbarProvider } from 'notistack';
