@@ -64,6 +64,11 @@ function normalizeType(type) {
   return 'text';
 }
 
+function normalizeValue(value) {
+  if (value === null || value === undefined) return '';
+  return String(value);
+}
+
 export default function VirtualKeyboard() {
   const {
     isOpen,
@@ -83,18 +88,19 @@ export default function VirtualKeyboard() {
   useEffect(() => {
     if (!isOpen) return;
 
-    setValue(currentValue || '');
+    setValue(normalizeValue(currentValue));
     setIsShift(false);
     setIsSymbols(false);
   }, [isOpen, currentValue]);
 
   const setInputValue = (nextValue) => {
-    setValue(nextValue);
-    updateValue?.(nextValue);
+    const normalized = normalizeValue(nextValue);
+    setValue(normalized);
+    updateValue?.(normalized);
   };
 
   const addCharacter = (char) => {
-    const nextValue = `${value}${char}`;
+    const nextValue = `${normalizeValue(value)}${char}`;
     setInputValue(nextValue);
     if (isShift && inputType === 'text') {
       setIsShift(false);
@@ -103,12 +109,12 @@ export default function VirtualKeyboard() {
 
   const handleAction = (action) => {
     if (action === 'bksp') {
-      setInputValue(value.slice(0, -1));
+      setInputValue(normalizeValue(value).slice(0, -1));
       return;
     }
 
     if (action === 'enter') {
-      onSubmitCallback?.(value);
+      onSubmitCallback?.(normalizeValue(value));
       closeKeyboard();
       return;
     }
