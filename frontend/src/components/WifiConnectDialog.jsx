@@ -21,6 +21,14 @@ export default function WifiConnectDialog({ network, onClose, onSuccess }) {
   const handleConnect = async () => {
     try {
       setStatusMessage('Connecting...');
+      
+      // Turn off dryer when connecting to WiFi
+      api.setStatus(false)
+        .then(() => {
+          console.log("Dryer turned off due to WiFi connection");
+        })
+        .catch(err => console.error("Error turning off dryer:", err));
+      
       const res = await api.setConnection(network.ssid, password);
       setStatusMessage(res.data.message);
       if (res.data.status === "Success") onSuccess();

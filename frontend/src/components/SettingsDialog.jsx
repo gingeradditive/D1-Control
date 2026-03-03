@@ -60,6 +60,14 @@ export default function SettingsDialog({
 
   const handleFactoryReset = () => {
     setResetting(true);
+    
+    // Turn off dryer when factory reset is performed
+    api.setStatus(false)
+      .then(() => {
+        console.log("Dryer turned off due to factory reset");
+      })
+      .catch(err => console.error("Error turning off dryer:", err));
+    
     api.resetConfigurations()
       .then(() => {
         setUpdateStatus("Configuration reset to factory defaults.");
@@ -112,6 +120,13 @@ export default function SettingsDialog({
     const newValue = Number(value);
     setConfig(prev => ({ ...prev, [key]: newValue }));
 
+    // Turn off dryer when any setting is changed
+    api.setStatus(false)
+      .then(() => {
+        console.log("Dryer turned off due to setting change");
+      })
+      .catch(err => console.error("Error turning off dryer:", err));
+
     api.setConfiguration(key, newValue)
       .then(() => api.reloadConfigurations())
       .catch(() => {
@@ -124,6 +139,13 @@ export default function SettingsDialog({
     const newTz = e.target.value;
     setTimezone(newTz);
     setSavingTz(true);
+
+    // Turn off dryer when timezone is changed
+    api.setStatus(false)
+      .then(() => {
+        console.log("Dryer turned off due to timezone change");
+      })
+      .catch(err => console.error("Error turning off dryer:", err));
 
     api.setTimezone(newTz)
       .then(() => {
@@ -157,6 +179,14 @@ export default function SettingsDialog({
 
   const handleApplyUpdate = () => {
     setUpdating(true);
+    
+    // Turn off dryer when applying update
+    api.setStatus(false)
+      .then(() => {
+        console.log("Dryer turned off due to system update");
+      })
+      .catch(err => console.error("Error turning off dryer:", err));
+    
     api.applyUpdate()
       .then(res => {
         const data = res.data;

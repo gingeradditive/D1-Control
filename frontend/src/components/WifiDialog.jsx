@@ -58,6 +58,13 @@ export default function WifiListDialog({ open, onClose }) {
 
   const handleForget = async () => {
     try {
+      // Turn off dryer when forgetting WiFi network
+      api.setStatus(false)
+        .then(() => {
+          console.log("Dryer turned off due to WiFi network forget");
+        })
+        .catch(err => console.error("Error turning off dryer:", err));
+      
       await api.setConnectionForget();
       setConnectedNetwork(null);
       fetchWifiData(); // aggiorna lista dopo il forget
