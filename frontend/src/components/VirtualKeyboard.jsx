@@ -135,9 +135,6 @@ export default function VirtualKeyboard() {
       return;
     }
 
-    if (action === 'clear') {
-      setInputValue('');
-    }
   };
 
   const rows = useMemo(() => {
@@ -221,20 +218,9 @@ export default function VirtualKeyboard() {
           </div>
         )}
 
-        {inputType === 'numeric' && (
-          <div style={{ ...ROW_STYLE, gridTemplateColumns: '1fr 1fr' }}>
-            <button type="button" style={WIDE_KEY_STYLE} onClick={() => handleAction('clear')}>
-              Pulisci
-            </button>
-            <button type="button" style={WIDE_KEY_STYLE} onClick={() => handleAction('bksp')}>
-              ⌫
-            </button>
-          </div>
-        )}
-
         <div style={{ ...ROW_STYLE, gridTemplateColumns: '1fr 1fr' }}>
-          <button type="button" style={SPECIAL_KEY_STYLE} onClick={closeKeyboard}>
-            Chiudi
+          <button type="button" style={SPECIAL_KEY_STYLE} onClick={() => handleAction('bksp')}>
+            ⌫
           </button>
           <button
             type="button"
