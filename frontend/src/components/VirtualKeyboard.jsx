@@ -73,15 +73,9 @@ export default function VirtualKeyboard() {
 
   const handleKeyPress = button => {
     if (button === '{enter}') {
-      onSubmitCallback(localValue);
+      const submitValue = keyboardRef.current?.getInput() ?? localValue;
+      onSubmitCallback(submitValue);
       setTimeout(function () { closeKeyboard(); }, 200);
-    }
-
-    if (button === '{bksp}') {
-      const newVal = localValue.slice(0, -1);
-      setLocalValue(newVal);
-      keyboardRef.current.setInput(newVal);
-      updateValue?.(newVal);
     }
 
     if (button === '{lock}') {
