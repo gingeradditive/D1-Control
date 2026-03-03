@@ -19,7 +19,7 @@ export const api = {
   setPoint: (value) => apiClient.post(`/api/dryer/setpoint/${value}`),
 
   // --- Network ---
-  getConnection: () => apiClient.get("/api/network"),
+  getConnection: () => apiClient.get("/api/network/"),
   setConnection: (ssid, password) => apiClient.post("/api/network/connect", { ssid, password }),
   getConnectionStatus: () => apiClient.get("/api/network/status"),
   getconnectionG1OS: () => apiClient.get("/api/network/g1os"),

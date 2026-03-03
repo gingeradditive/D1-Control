@@ -8,7 +8,7 @@ import ScreensaverOverlay from './ScreensaverOverlay';
 import { useSnackbar } from 'notistack';
 import CloseIcon from '@mui/icons-material/Close';
 
-export default function StatusManager({ presetsVersion, pinnedPresetIds = [] }) {
+export default function StatusManager({ presetsVersion, pinnedPresetIds = [], onBackendAvailabilityChange }) {
   const isKiosk = new URLSearchParams(window.location.search).get("kiosk") === "true";
 
   const [isScreensaverActive, setIsScreensaverActive] = useState(false);
@@ -106,12 +106,22 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [] }) 
   useEffect(() => {
     const interval = setInterval(() => {
       api.getStatus()
-        .then(res => setStatus(res.data))
-        .catch(err => console.error("Errore nel fetch /status:", err));
+        .then(res => {
+          setStatus(res.data);
+          if (onBackendAvailabilityChange) {
+            onBackendAvailabilityChange(true);
+          }
+        })
+        .catch(err => {
+          console.error("Errore nel fetch /status:", err);
+          if (onBackendAvailabilityChange) {
+            onBackendAvailabilityChange(false);
+          }
+        });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [onBackendAvailabilityChange]);
 
   // Controllo aggiornamenti
   useEffect(() => {
