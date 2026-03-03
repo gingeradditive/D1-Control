@@ -30,7 +30,7 @@ async def proxy_api(request: Request, path: str):
         if k.lower() not in ["host", "content-length"]
     }
 
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
         resp = await client.request(
             method, url, content=body, headers=headers
         )
@@ -54,7 +54,7 @@ async def proxy_frontend(request: Request, path: str):
         if k.lower() not in ["host", "content-length"]
     }
 
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
         resp = await client.request(
             method, url, content=body, headers=headers
         )

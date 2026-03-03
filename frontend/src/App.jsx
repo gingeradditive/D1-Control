@@ -4,16 +4,19 @@ import Header from './components/Header';
 import StatusManager from './components/StatusManager';
 import DateTimeDisplay from './components/DateTimeDisplay';
 import BackButton from './components/BackButton';
+import BackendUnavailableModal from './components/BackendUnavailableModal';
 import './App.css';
 import { api } from './api';
 import { KeyboardProvider } from './KeyboardContext';
 import VirtualKeyboard from './components/VirtualKeyboard';
 import { SnackbarProvider } from 'notistack';
+import { useBackendAvailability } from './hooks/useBackendAvailability';
 
 export default function App() {
   const [showBackButton, setShowBackButton] = useState(false);
   const [presetsVersion, setPresetsVersion] = useState(0);
   const handlePresetSaved = () => setPresetsVersion(v => v + 1);
+  const { isBackendAvailable, isChecking } = useBackendAvailability();
 
   const [pinnedPresetIds, setPinnedPresetIds] = useState(() => {
     try {
@@ -76,6 +79,8 @@ export default function App() {
         {isKiosk && !showCursor && (
           <style>{`* { cursor: none !important; }`}</style>
         )}
+
+        <BackendUnavailableModal open={isChecking || isBackendAvailable === false} />
 
         <Box
           sx={{
