@@ -6,18 +6,13 @@ CONFIG_FILE = "config.json"
 T = TypeVar("T")
 
 DEFAULT_CONFIG = {
-    "heater_pulse_duration": 10,
-    "heater_kp": 5.0,
-    "heater_ki": 0.1,
-    "heater_min_pause": 5,
-    "heater_max_pause": 60,
+    "heater_on_duration": 10,
+    "heater_off_duration": 5,
     "setpoint": 70,
     "fan_cooldown_duration": 120,
-    "valve_open_interval": 15,
-    "valve_close_interval": 5,
+    "valve_open_duration": 1,
+    "valve_interval": 15,
     "inactivity_timeout": 5,
-    "air_purge_time": 60,
-    "drink_cycle_time": 3600,
     "screensaver_delay": 300,
 }
 

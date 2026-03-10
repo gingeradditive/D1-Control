@@ -26,8 +26,6 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
   const [status, setStatus] = useState({
     current_temp: null,
     setpoint: null,
-    current_humidity: null,
-    dew_point: null,
     heater: false,
     fan: false,
     status: false,
@@ -273,9 +271,6 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
       </Box>
 
       <Footer
-        ext_hum="---"
-        int_hum={status.current_humidity}
-        dew_point={status.dew_point}
         status={status.status}
         heater={status.heater}
         fan={status.fan}

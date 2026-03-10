@@ -7,19 +7,16 @@ router = APIRouter()
 @router.get("/status")
 def get_status():
     dryer = controllers["dryer"]
-    latest = dryer.get_status_data()
-    timestamp, max6675_temp, sht40_temp, dew_point, ssr_heater, ssr_fan, status, valve, hum_abs = latest
+    ts, temp, heater, fan, valve = dryer.get_status_data()
     elapsed = 0
     if dryer.dryer_status and dryer.session_start_time is not None:
         elapsed = int(time.time() - dryer.session_start_time)
     return {
         "setpoint": dryer.set_temp,
-        "current_temp": round(max6675_temp),
-        "current_humidity": round(hum_abs),
-        "dew_point": round(dew_point),
-        "heater": ssr_heater,
-        "fan": ssr_fan,
-        "status": status,
+        "current_temp": round(temp),
+        "heater": heater,
+        "fan": fan,
+        "status": dryer.dryer_status,
         "valve": valve,
         "errors": dryer.errors,
         "drying_elapsed_seconds": elapsed,
@@ -41,12 +38,11 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
             {
                 "timestamp": t.strftime("%Y-%m-%d %H:%M:%S"),
                 "temperature": round(temp, 2),
-                "humidity": round(hum, 2),
                 "heater_ratio": round(hr, 2),
                 "fan_ratio": round(fr, 2),
                 "valve": round(valve, 2),
             }
-            for t, temp, hum, hr, fr, *_ , valve in history
+            for t, temp, hr, fr, valve in history
         ]
     }
 

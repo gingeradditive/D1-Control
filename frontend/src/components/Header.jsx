@@ -24,7 +24,6 @@ import { api } from '../api'; // Assicurati che l'import sia corretto
 const mockChartData = Array.from({ length: 10 }, (_, i) => ({
   time: `T${i}`,
   temperature: 20 + i,
-  humidity: 50 + i * 2,
 }));
 
 export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange }) {
@@ -74,27 +73,21 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
   };
 
   const keysToShow = [
-    "heater_pulse_duration",
-    "heater_kp",
-    "heater_ki",
-    "heater_min_pause",
-    "heater_max_pause",
+    "heater_on_duration",
+    "heater_off_duration",
     "fan_cooldown_duration",
+    "valve_open_duration",
+    "valve_interval",
     "inactivity_timeout",
-    "valve_open_interval",
-    "valve_close_interval",
   ];
 
   const titlesMap = {
-    heater_pulse_duration: "Heater pulse (s)",
-    heater_kp: "Heater gain Kp",
-    heater_ki: "Heater gain Ki",
-    heater_min_pause: "Heater min pause (s)",
-    heater_max_pause: "Heater max pause (s)",
+    heater_on_duration: "Heater ON time (s)",
+    heater_off_duration: "Heater OFF pause (s)",
     fan_cooldown_duration: "Fan cooldown (s)",
+    valve_open_duration: "Valve open time (min)",
+    valve_interval: "Valve interval (min)",
     inactivity_timeout: "Screensaver delay (min)",
-    valve_open_interval: "Air purge time (min)",
-    valve_close_interval: "Drying cycle time (min)",
   };
 
   return (
