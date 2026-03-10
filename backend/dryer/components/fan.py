@@ -27,3 +27,7 @@ class Fan:
 
     def is_on(self) -> bool:
         return self._is_on
+
+    def cleanup(self):
+        if IS_RASPBERRY:
+            GPIO.output(self.gpio_pin, GPIO.LOW)

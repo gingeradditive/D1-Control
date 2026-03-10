@@ -67,3 +67,27 @@ def set_filter_hours(hours: float):
     if dryer.dryer_status:
         dryer.session_start_time = __import__("time").time()
     return {"filter_hours": hours}
+
+@router.get("/purge-time")
+def get_purge_time():
+    dryer = controllers["dryer"]
+    return {"purge_time": dryer.purge_time}
+
+@router.post("/purge-time/{seconds}")
+def set_purge_time(seconds: int):
+    dryer = controllers["dryer"]
+    dryer.purge_time = seconds
+    dryer.config.set("purge_time", seconds)
+    return {"purge_time": seconds}
+
+@router.get("/cycle-time")
+def get_cycle_time():
+    dryer = controllers["dryer"]
+    return {"cycle_time": dryer.cycle_time}
+
+@router.post("/cycle-time/{seconds}")
+def set_cycle_time(seconds: int):
+    dryer = controllers["dryer"]
+    dryer.cycle_time = seconds
+    dryer.config.set("cycle_time", seconds)
+    return {"cycle_time": seconds}

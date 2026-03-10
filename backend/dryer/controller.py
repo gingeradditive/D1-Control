@@ -26,6 +26,12 @@ class DryerController:
         self.fan_cooldown_duration = self.config.get("fan_cooldown_duration", 120, int)
         self.valve_open_duration = self.config.get("valve_open_duration", 1, int)
         self.valve_interval = self.config.get("valve_interval", 15, int)
+        
+        # purge time
+        self.purge_time = self.config.get("purge_time", 60, int)
+        
+        # cycle time
+        self.cycle_time = self.config.get("cycle_time", 3600, int)
 
         # state
         self.last_heater_toggle = time.time()
@@ -191,6 +197,7 @@ class DryerController:
             self.heater.off()
             self.fan.off()
             self.valve.cleanup()
+            self.fan.cleanup()
             try:
                 import RPi.GPIO as GPIO
                 GPIO.output(self.heater.gpio_pin, GPIO.LOW)

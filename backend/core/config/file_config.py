@@ -14,6 +14,8 @@ DEFAULT_CONFIG = {
     "valve_interval": 15,
     "inactivity_timeout": 5,
     "screensaver_delay": 300,
+    "purge_time": 60,
+    "cycle_time": 3600,
 }
 
 
