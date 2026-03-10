@@ -5,7 +5,6 @@ from fastapi import APIRouter
 from backend.core.state import controllers
 
 router = APIRouter()
-dryer = controllers["dryer"]
 _boot_time = time.time()
 
 
@@ -103,6 +102,7 @@ def _cpu_freq():
 
 @router.get("")
 def get_stats():
+    dryer = controllers["dryer"]
     hours = dryer.get_operating_hours()
     return {
         "dryer": {

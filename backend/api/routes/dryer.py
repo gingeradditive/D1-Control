@@ -3,10 +3,10 @@ from fastapi import APIRouter, Query
 from backend.core.state import controllers
 
 router = APIRouter()
-dryer = controllers["dryer"]
 
 @router.get("/status")
 def get_status():
+    dryer = controllers["dryer"]
     latest = dryer.get_status_data()
     timestamp, max6675_temp, sht40_temp, dew_point, ssr_heater, ssr_fan, status, valve, hum_abs = latest
     elapsed = 0
@@ -27,11 +27,13 @@ def get_status():
 
 @router.post("/status/{status}")
 def set_status(status: bool):
+    dryer = controllers["dryer"]
     dryer.start() if status else dryer.stop()
     return {"status": "running" if status else "stopped"}
 
 @router.get("/history")
 def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
+    dryer = controllers["dryer"]
     history = dryer.get_history_data(mode)
     return {
         "mode": mode,
@@ -50,16 +52,19 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
 
 @router.post("/setpoint/{value}")
 def set_setpoint(value: float):
+    dryer = controllers["dryer"]
     dryer.update_setpoint(value)
     return {"setpoint": dryer.set_temp}
 
 @router.post("/filter/reset")
 def reset_filter_hours():
+    dryer = controllers["dryer"]
     dryer.reset_filter_hours()
     return {"filter_hours": 0.0}
 
 @router.post("/filter/set/{hours}")
 def set_filter_hours(hours: float):
+    dryer = controllers["dryer"]
     dryer._accumulate_session_hours()
     dryer.filter_hours = hours
     dryer.config.set("filter_operating_hours", round(hours, 4))

@@ -2,9 +2,8 @@ import time
 from datetime import datetime
 
 def background_loop(controllers, is_running):
-    dryer = controllers["dryer"]
-
     while is_running():
+        dryer = controllers["dryer"]
         dryer.update_fan_cooldown()
         dryer.update_valve()
         now, max6675_temp, hum_abs, sht40_temp, dew_point = dryer.read_sensor()
