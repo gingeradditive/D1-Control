@@ -10,37 +10,39 @@ from backend.dryer.components.valve import Valve
 from backend.dryer.components.sensors import Sensors
 
 class DryerController:
-    """
-    Façade compatibile con l'API originale.
-    Internamente usa componenti separati per heater/fan/valve/sensors.
-    """
     def __init__(self, config):
-        # config
         self.config = config
-        self.last_heater_action = time.time()
-        self.heater_pulse_duration = self.config.get("heater_pulse_duration", 10, int)
-        self.Kp = self.config.get("heater_kp", 5.0, float)
-        self.Ki = self.config.get("heater_ki", 0.1, float)
-        self.min_pause = self.config.get("heater_min_pause", 5, int)
-        self.max_pause = self.config.get("heater_max_pause", 60, int)
-        set_temp = self.config.get("setpoint", 70, int)
-        self.fan_cooldown_duration = self.config.get("fan_cooldown_duration", 120, int)
-        self.valve_open_interval = self.config.get("valve_open_interval", 15, int)
-        self.valve_close_interval = self.config.get("valve_close_interval", 5, int)
 
-        # system vars
-        self.integral_error = 0.0
+        # heater pulse config
+        self.heater_on_duration = self.config.get("heater_on_duration", 10, int)
+        self.heater_off_duration = self.config.get("heater_off_duration", 5, int)
+
+        # setpoint
+        set_temp = self.config.get("setpoint", 70, int)
         self.set_temp = set_temp
         self.tolerance = set_temp * 0.01
+
+        # fan / valve
+        self.fan_cooldown_duration = self.config.get("fan_cooldown_duration", 120, int)
+        self.valve_open_duration = self.config.get("valve_open_duration", 1, int)
+        self.valve_interval = self.config.get("valve_interval", 15, int)
+        
+        # purge time
+        self.purge_time = self.config.get("purge_time", 60, int)
+        
+        # cycle time
+        self.cycle_time = self.config.get("cycle_time", 3600, int)
+
+        # state
+        self.last_heater_toggle = time.time()
         self.history = deque(maxlen=43200)
         self.log_timer = time.time()
         self.dryer_status = False
         self.fan_cooldown_end = None
         self.cooldown_active = False
         self.valve_last_switch_time = time.time()
-        self.hum_abs = 0.0
 
-        # operating hours tracking
+        # operating hours
         self.total_hours = self.config.get("total_operating_hours", 0.0, float)
         self.filter_hours = self.config.get("filter_operating_hours", 0.0, float)
         self.session_start_time = None
@@ -54,15 +56,15 @@ class DryerController:
         self.valve = Valve()
         self.sensors = Sensors()
 
-        # setup log file (same pattern as original)
+        # log file
         self.log_file = f"logs/temperature_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         try:
             with open(self.log_file, "w") as f:
-                f.write("timestamp;max6675_temp;sht40_temp;dew_point;ssr_heater;ssr_fan;setpoint;valve\n")
+                f.write("timestamp;temperature;ssr_heater;ssr_fan;setpoint;valve\n")
         except Exception as e:
             print(f"[DryerController] Cannot create log file: {e}")
 
-    # --- compatibility methods (start/stop) ---
+    # --- start / stop ---
     def start(self):
         if not self.dryer_status:
             self.dryer_status = True
@@ -72,107 +74,88 @@ class DryerController:
             self.fan.on()
             self.valve.close()
             self.valve_last_switch_time = time.time()
-            print("Heater started.")
-    
+            self.last_heater_toggle = time.time()
+            print("Dryer started.")
+
     def stop(self):
         if self.dryer_status:
             self._accumulate_session_hours()
             self.dryer_status = False
             self.heater.off()
-            print("Heater stopped.")
+            print("Dryer stopped.")
             self.fan_cooldown_end = time.time() + self.fan_cooldown_duration
             self.cooldown_active = True
             self.valve.close()
             print("Fan cooldown started.")
 
-    # wrapper helpers to expose same attributes used externally in existing code
+    # --- properties ---
     @property
     def ssr_heater(self):
         return self.heater.is_on()
-
-    @ssr_heater.setter
-    def ssr_heater(self, v: bool):
-        # not used normally but kept for API parity
-        if v:
-            self.heater.on()
-        else:
-            self.heater.off()
 
     @property
     def ssr_fan(self):
         return self.fan.is_on()
 
-    @ssr_fan.setter
-    def ssr_fan(self, v: bool):
-        if v:
-            self.fan.on()
-        else:
-            self.fan.off()
-
     @property
     def valve_is_open(self):
         return self.valve.is_open()
 
-    @valve_is_open.setter
-    def valve_is_open(self, v: bool):
-        if v:
-            self.valve.open()
-        else:
-            self.valve.close()
-
-    # --- sensor read (compatibile) ---
+    # --- sensor read ---
     def read_sensor(self):
         try:
-            now, max6675_temp, ah, sht_temp, dew_point = self.sensors.read_all()
-            # clear errors if successful
+            now, temperature = self.sensors.read_all()
             self.errors.clear()
-            # append to history (preserve original tuple layout)
-            self.history.append((now, max6675_temp, sht_temp, dew_point, self.ssr_heater, self.ssr_fan, self.valve_is_open))
-            self.hum_abs = ah
-            return now, max6675_temp, ah, sht_temp, dew_point
+            self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
+            return now, temperature
         except Exception as e:
-            # keep behavior: log error and return sentinel values
-            print(f"Errore lettura sensori: {e}", file=sys.stderr)
+            print(f"Sensor read error: {e}", file=sys.stderr)
             now = datetime.now()
             if str(e) not in self.errors:
                 self.errors[str(e)] = now
-            return now, 999, 999, 999, 999
+            return now, 999
 
-    # --- PID discrete (compatibile) ---
-    def update_heater_pid_discrete(self, temp):
+    # --- heater control (pulse heating) ---
+    def update_heater(self, temp):
         if not self.dryer_status:
             self.heater.off()
             return
 
         now = time.time()
-        error = self.set_temp - temp
-        self.integral_error += error * 1.0
+        needs_heat = temp < (self.set_temp - self.tolerance)
+        at_or_above = temp >= self.set_temp
 
-        raw_pause = self.max_pause - (self.Kp * error + self.Ki * self.integral_error)
-        pause_duration = max(self.min_pause, min(self.max_pause, raw_pause))
-
-        if error > self.tolerance and not self.heater.is_on() and not self.valve.is_open():
-            if now - self.last_heater_action >= pause_duration:
-                self.heater.on()
-                self.last_heater_action = now
-                print(f"[+{error:.2f}°C] Heater ON per {self.heater_pulse_duration}s (pause: {pause_duration:.1f}s)")
-        elif self.valve.is_open() and self.heater.is_on():
-            self.heater.off()
-            self.last_heater_action = now
-            print("Heater OFF (valve opened)")
-        elif self.heater.is_on() and now - self.last_heater_action >= self.heater_pulse_duration:
-            self.heater.off()
-            self.last_heater_action = now
-            print("Heater OFF")
+        if self.heater.is_on():
+            # turn off immediately if at setpoint or valve open
+            if at_or_above:
+                self.heater.off()
+                self.last_heater_toggle = now
+                print(f"Heater OFF (setpoint reached: {temp:.1f}°C >= {self.set_temp:.1f}°C)")
+            elif self.valve.is_open():
+                self.heater.off()
+                self.last_heater_toggle = now
+                print("Heater OFF (valve open)")
+            elif now - self.last_heater_toggle >= self.heater_on_duration:
+                self.heater.off()
+                self.last_heater_toggle = now
+                print(f"Heater OFF (pulse end, temp: {temp:.1f}°C)")
+        else:
+            # turn on if below setpoint, pause elapsed, valve closed
+            if needs_heat and not self.valve.is_open():
+                if now - self.last_heater_toggle >= self.heater_off_duration:
+                    self.heater.on()
+                    self.last_heater_toggle = now
+                    print(f"Heater ON (temp: {temp:.1f}°C, target: {self.set_temp:.1f}°C)")
 
     # --- logging ---
-    def log(self, timestamp, max6675_temp, dew_point, sht40_temp):
+    def log(self, timestamp, temperature):
         try:
             with open(self.log_file, "a") as f:
-                f.write(f"{timestamp};{max6675_temp:.2f};{sht40_temp:.2f};{dew_point:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
+                f.write(f"{timestamp};{temperature:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
         except Exception as e:
             print(f"[DryerController] Log error: {e}")
 
+    # --- operating hours ---
     def _accumulate_session_hours(self):
         if self.session_start_time is not None:
             elapsed = (time.time() - self.session_start_time) / 3600.0
@@ -210,12 +193,11 @@ class DryerController:
 
     def shutdown(self):
         self._accumulate_session_hours()
-        # make sure all actuators are turned off and resources cleaned
         try:
             self.heater.off()
             self.fan.off()
             self.valve.cleanup()
-            # If running on Raspberry, also cleanup GPIO to be safe
+            self.fan.cleanup()
             try:
                 import RPi.GPIO as GPIO
                 GPIO.output(self.heater.gpio_pin, GPIO.LOW)
@@ -226,9 +208,8 @@ class DryerController:
         except Exception as e:
             print(f"[DryerController] Shutdown exception: {e}")
 
-    # --- history/status (compatibile with existing API) ---
+    # --- history / status ---
     def get_history_data(self, mode='1h'):
-        # reuse old code but reading from self.history (already same shape)
         now = datetime.now()
         data = list(self.history)
         if not data:
@@ -236,88 +217,50 @@ class DryerController:
 
         if mode == '1m':
             filtered = [x for x in data if (now - x[0]).total_seconds() <= 60]
+            return [
+                (ts, temp, 1.0 if htr else 0.0, 1.0 if fan else 0.0, vlv)
+                for ts, temp, htr, fan, vlv in filtered
+            ]
+
+        def _aggregate(filtered, window_start_fn, window_count):
             results = []
-            for timestamp, max6675_temp, sht40_temp, dew_point, ssr_heater, ssr_fan, valve in filtered:
-                heater_ratio = 1.0 if ssr_heater else 0.0
-                fan_ratio = 1.0 if ssr_fan else 0.0
-                results.append((timestamp, max6675_temp, dew_point, heater_ratio, fan_ratio, max6675_temp, max6675_temp, dew_point, dew_point, valve))
+            for i in range(window_count):
+                ws = window_start_fn(i)
+                we = window_start_fn(i + 1) if i + 1 < window_count else now
+                window = [x for x in filtered if ws <= x[0] < we]
+                if not window:
+                    continue
+                temps = [x[1] for x in window]
+                heaters = [1 if x[2] else 0 for x in window]
+                fans = [1 if x[3] else 0 for x in window]
+                valves = [1 if x[4] else 0 for x in window]
+                n = len(window)
+                results.append((
+                    ws + (we - ws) / 2,
+                    sum(temps) / n,
+                    sum(heaters) / n,
+                    sum(fans) / n,
+                    sum(valves) / n,
+                ))
             return results
 
         if mode == '1h':
             start = now - timedelta(hours=1)
             filtered = [x for x in data if x[0] >= start]
-            results = []
-            for i in range(60):
-                window_start = start + timedelta(minutes=i)
-                window_end = window_start + timedelta(minutes=1)
-                window_data = [x for x in filtered if window_start <= x[0] < window_end]
-                if not window_data:
-                    continue
-                temps = [x[1] for x in window_data]
-                dews = [x[3] for x in window_data]
-                heaters = [1 if x[4] else 0 for x in window_data]
-                fans = [1 if x[5] else 0 for x in window_data]
-                timestamp = window_start + timedelta(seconds=30)
-                valve = [1 if x[6] else 0 for x in window_data]
-                temp_avg = sum(temps) / len(temps)
-                dews_avg = sum(dews) / len(dews)
-                heater_ratio = sum(heaters) / len(heaters)
-                fan_ratio = sum(fans) / len(fans)
-                valve_ration = sum(valve) / len(valve)
-                results.append((timestamp, temp_avg, dews_avg, heater_ratio, fan_ratio, min(temps), max(temps), min(dews), max(dews), valve_ration))
-            return results
+            return _aggregate(filtered, lambda i: start + timedelta(minutes=i), 60)
 
         if mode == '12h':
             start = now - timedelta(hours=12)
             filtered = [x for x in data if x[0] >= start]
-            results = []
-            for i in range(24):
-                window_start = start + timedelta(minutes=30*i)
-                window_end = window_start + timedelta(minutes=30)
-                window_data = [x for x in filtered if window_start <= x[0] < window_end]
-                if not window_data:
-                    continue
-                temps = [x[1] for x in window_data]
-                dews = [x[3] for x in window_data]
-                heaters = [1 if x[4] else 0 for x in window_data]
-                fans = [1 if x[5] else 0 for x in window_data]
-                timestamp = window_start + timedelta(minutes=15)
-                valve = [1 if x[6] else 0 for x in window_data]
-                temp_avg = sum(temps) / len(temps)
-                dews_avg = sum(dews) / len(dews)
-                heater_ratio = sum(heaters) / len(heaters)
-                fan_ratio = sum(fans) / len(fans)
-                valve_ration = sum(valve) / len(valve)
-                results.append((timestamp, temp_avg, dews_avg, heater_ratio, fan_ratio, min(temps), max(temps), min(dews), max(dews), valve_ration))
-            return results
+            return _aggregate(filtered, lambda i: start + timedelta(minutes=30 * i), 24)
 
         raise ValueError("Invalid mode")
 
     def get_status_data(self):
         if not self.history:
-            data = datetime.now(), 0.0, 0.0, 0.0, 0.0, 0.0, False, False
-            return data
-        (timestamp, max6675_temp, sht40_temp, dew_point, ssr_heater, ssr_fan, valve) = self.history[-1]
-        return (timestamp, max6675_temp, sht40_temp, dew_point, ssr_heater, ssr_fan, self.dryer_status, valve, self.hum_abs)
-
-    def aggregate_data(self, data, now, interval_seconds, window_seconds):
-        buckets = {}
-        for (t, temp, hum, status) in data:
-            delta = (now - t).total_seconds()
-            if delta <= window_seconds:
-                bucket_key = int(delta // interval_seconds)
-                buckets.setdefault(bucket_key, []).append((temp, hum, status))
-
-        result = []
-        for key in sorted(buckets.keys()):
-            bucket = buckets[key]
-            if bucket:
-                avg_temp = sum(t for t, _, _ in bucket) / len(bucket)
-                avg_hum = sum(h for _, h, _ in bucket) / len(bucket)
-                heater_ratio = sum(1 for _, _, s in bucket if s) / len(bucket)
-                bucket_time = now - timedelta(seconds=key * interval_seconds)
-                result.append((bucket_time, avg_temp, avg_hum, heater_ratio))
-        return result
+            return datetime.now(), 0.0, False, False, False
+        ts, temp, htr, fan, vlv = self.history[-1]
+        return ts, temp, htr, fan, vlv
 
     def update_setpoint(self, new_temp):
         self.set_temp = new_temp
@@ -332,20 +275,14 @@ class DryerController:
                 self.cooldown_active = False
                 print("Fan turned off after cooldown.")
 
-    def valve_open(self):
-        self.valve.open()
-
-    def valve_close(self):
-        self.valve.close()
-
     def update_valve(self):
         if self.dryer_status:
             now = time.time()
             if self.valve.is_open():
-                if now - self.valve_last_switch_time >= self.valve_open_interval * 60:
+                if now - self.valve_last_switch_time >= self.valve_open_duration * 60:
                     self.valve.close()
                     self.valve_last_switch_time = now
             else:
-                if now - self.valve_last_switch_time >= self.valve_close_interval * 60:
+                if now - self.valve_last_switch_time >= self.valve_interval * 60:
                     self.valve.open()
                     self.valve_last_switch_time = now

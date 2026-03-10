@@ -20,6 +20,11 @@ def reload_config():
 
     config = controllers["config"]
 
+    # Properly cleanup the old dryer controller before creating a new one
+    old_dryer = controllers.get("dryer")
+    if old_dryer:
+        old_dryer.shutdown()
+    
     controllers["dryer"] = controllers["dryer"].__class__(config)
     controllers["network"] = controllers["network"].__class__()
     controllers["update"] = controllers["update"].__class__(".")

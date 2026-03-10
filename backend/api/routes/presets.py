@@ -15,12 +15,14 @@ HARDCODED_PRESETS = [
         "name": "PLA",
         "temperature": 50,
         "builtin": True,
+        "pinned": True,
     },
     {
         "id": "petg",
         "name": "PETG",
         "temperature": 65,
         "builtin": True,
+        "pinned": True,
     },
 ]
 
@@ -32,11 +34,13 @@ TEMP_MAX = 70
 class PresetCreate(BaseModel):
     name: str
     temperature: float
+    pinned: bool = False
 
 
 class PresetUpdate(BaseModel):
     name: Optional[str] = None
     temperature: Optional[float] = None
+    pinned: Optional[bool] = None
 
 
 def _read_user_presets() -> list[dict]:
@@ -59,6 +63,8 @@ def get_all_presets():
     user_presets = _read_user_presets()
     for p in user_presets:
         p["builtin"] = False
+        if "pinned" not in p:
+            p["pinned"] = False
     return HARDCODED_PRESETS + user_presets
 
 
@@ -74,6 +80,7 @@ def create_preset(preset: PresetCreate):
         "id": str(uuid.uuid4())[:8],
         "name": preset.name,
         "temperature": preset.temperature,
+        "pinned": preset.pinned,
         "builtin": False,
     }
     user_presets.append(new_preset)
@@ -101,6 +108,8 @@ def update_preset(preset_id: str, preset: PresetUpdate):
                 p["name"] = preset.name
             if preset.temperature is not None:
                 p["temperature"] = preset.temperature
+            if preset.pinned is not None:
+                p["pinned"] = preset.pinned
             _write_user_presets(user_presets)
             p["builtin"] = False
             return p

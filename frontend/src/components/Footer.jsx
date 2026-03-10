@@ -71,7 +71,7 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
   },
 }));
 
-export default function Footer({ ext_hum, int_hum, dew_point, status, onStatusChange, heater, fan, valve, presets = [], pinnedPresetIds = [], activePresetId, onPresetSelect }) {
+export default function Footer({ status, onStatusChange, heater, fan, valve, presets = [], pinnedPresetIds = [], activePresetId, onPresetSelect }) {
   const [checked, setChecked] = useState(status);
 
   // Sync internal state with external prop
