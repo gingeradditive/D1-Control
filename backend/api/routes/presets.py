@@ -4,10 +4,13 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+from backend.core.state import controllers
 
 router = APIRouter()
 
 PRESETS_FILE = "presets.json"
+MAX_PINNED_PRESETS = 3
+DEFAULT_PINNED_PRESET_IDS = ["pla", "petg"]
 
 HARDCODED_PRESETS = [
     {
@@ -15,14 +18,12 @@ HARDCODED_PRESETS = [
         "name": "PLA",
         "temperature": 50,
         "builtin": True,
-        "pinned": True,
     },
     {
         "id": "petg",
         "name": "PETG",
         "temperature": 65,
         "builtin": True,
-        "pinned": True,
     },
 ]
 
@@ -43,6 +44,10 @@ class PresetUpdate(BaseModel):
     pinned: Optional[bool] = None
 
 
+class PinnedPresetsUpdate(BaseModel):
+    ids: list[str]
+
+
 def _read_user_presets() -> list[dict]:
     if not os.path.exists(PRESETS_FILE):
         return []
@@ -58,14 +63,69 @@ def _write_user_presets(presets: list[dict]) -> None:
         json.dump(presets, f, indent=4)
 
 
-@router.get("/")
-def get_all_presets():
+def _normalize_pinned_ids(ids: list[str], available_ids: set[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for preset_id in ids:
+        if preset_id in available_ids and preset_id not in seen:
+            normalized.append(preset_id)
+            seen.add(preset_id)
+        if len(normalized) >= MAX_PINNED_PRESETS:
+            break
+    return normalized
+
+
+def _all_presets() -> list[dict]:
     user_presets = _read_user_presets()
     for p in user_presets:
         p["builtin"] = False
-        if "pinned" not in p:
-            p["pinned"] = False
     return HARDCODED_PRESETS + user_presets
+
+
+def _get_pinned_ids() -> list[str]:
+    config = controllers["config"]
+    all_presets = _all_presets()
+    available_ids = {p["id"] for p in all_presets}
+
+    raw_ids = config.all().get("pinned_preset_ids", DEFAULT_PINNED_PRESET_IDS)
+    if not isinstance(raw_ids, list):
+        raw_ids = DEFAULT_PINNED_PRESET_IDS
+
+    normalized_ids = _normalize_pinned_ids(raw_ids, available_ids)
+    if normalized_ids != raw_ids:
+        config.set("pinned_preset_ids", normalized_ids)
+    return normalized_ids
+
+
+@router.get("/")
+def get_all_presets():
+    all_presets = _all_presets()
+    pinned_ids = set(_get_pinned_ids())
+    for p in all_presets:
+        p["pinned"] = p["id"] in pinned_ids
+    return all_presets
+
+
+@router.get("/pinned")
+def get_pinned_presets():
+    return {"ids": _get_pinned_ids()}
+
+
+@router.put("/pinned")
+def update_pinned_presets(payload: PinnedPresetsUpdate):
+    if len(payload.ids) > MAX_PINNED_PRESETS:
+        raise HTTPException(status_code=400, detail=f"You can pin at most {MAX_PINNED_PRESETS} presets")
+
+    all_presets = _all_presets()
+    available_ids = {p["id"] for p in all_presets}
+
+    unknown_ids = [preset_id for preset_id in payload.ids if preset_id not in available_ids]
+    if unknown_ids:
+        raise HTTPException(status_code=400, detail=f"Unknown preset ids: {', '.join(unknown_ids)}")
+
+    normalized_ids = _normalize_pinned_ids(payload.ids, available_ids)
+    controllers["config"].set("pinned_preset_ids", normalized_ids)
+    return {"ids": normalized_ids}
 
 
 @router.post("/")

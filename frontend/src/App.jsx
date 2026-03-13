@@ -17,15 +17,19 @@ export default function App() {
   const handlePresetSaved = () => setPresetsVersion(v => v + 1);
   const [isBackendAvailable, setIsBackendAvailable] = useState(null);
 
-  const [pinnedPresetIds, setPinnedPresetIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('pinnedPresetIds')) || [];
-    } catch { return []; }
-  });
+  const [pinnedPresetIds, setPinnedPresetIds] = useState([]);
 
-  const handlePinnedChange = (ids) => {
-    setPinnedPresetIds(ids);
-    localStorage.setItem('pinnedPresetIds', JSON.stringify(ids));
+  const handlePinnedChange = async (ids) => {
+    const current = pinnedPresetIds;
+    if (current.length === ids.length && current.every((id, idx) => id === ids[idx])) {
+      return;
+    }
+    try {
+      const res = await api.updatePinnedPresets(ids);
+      setPinnedPresetIds(res.data.ids || []);
+    } catch (err) {
+      console.error('Error updating pinned presets:', err);
+    }
   };
   const params = new URLSearchParams(window.location.search);
   const isKiosk = params.get("kiosk") === "true";
@@ -37,6 +41,12 @@ export default function App() {
       setShowBackButton(result.data.status === true);
     };
     checkG1OS();
+  }, []);
+
+  useEffect(() => {
+    api.getPinnedPresets()
+      .then(res => setPinnedPresetIds(res.data.ids || []))
+      .catch(err => console.error('Error fetching pinned presets:', err));
   }, []);
 
   useEffect(() => {

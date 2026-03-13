@@ -22,16 +22,12 @@ class DryerController:
         self.set_temp = set_temp
         self.tolerance = set_temp * 0.01
 
-        # fan / valve
+        # fan cooldown
         self.fan_cooldown_duration = self.config.get("fan_cooldown_duration", 120, int)
-        self.valve_open_duration = self.config.get("valve_open_duration", 1, int)
-        self.valve_interval = self.config.get("valve_interval", 15, int)
-        
-        # purge time
-        self.purge_time = self.config.get("purge_time", 60, int)
-        
-        # cycle time
-        self.cycle_time = self.config.get("cycle_time", 3600, int)
+
+        # purge / cycle
+        self.purge_time = self.config.get("purge_time", 1, int)
+        self.cycle_time = self.config.get("cycle_time", 60, int)
 
         # state
         self.last_heater_toggle = time.time()
@@ -279,10 +275,10 @@ class DryerController:
         if self.dryer_status:
             now = time.time()
             if self.valve.is_open():
-                if now - self.valve_last_switch_time >= self.valve_open_duration * 60:
+                if now - self.valve_last_switch_time >= self.purge_time * 60:
                     self.valve.close()
                     self.valve_last_switch_time = now
             else:
-                if now - self.valve_last_switch_time >= self.valve_interval * 60:
+                if now - self.valve_last_switch_time >= self.cycle_time * 60:
                     self.valve.open()
                     self.valve_last_switch_time = now

@@ -62,6 +62,8 @@ export const api = {
 
   // --- Presets ---
   getPresets: () => apiClient.get("/api/presets/"),
+  getPinnedPresets: () => apiClient.get("/api/presets/pinned"),
+  updatePinnedPresets: (ids) => apiClient.put("/api/presets/pinned", { ids }),
   createPreset: (name, temperature) =>
     apiClient.post("/api/presets/", { name, temperature }),
   updatePreset: (id, data) => apiClient.put(`/api/presets/${id}`, data),

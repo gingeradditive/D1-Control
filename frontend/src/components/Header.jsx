@@ -76,8 +76,8 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
     "heater_on_duration",
     "heater_off_duration",
     "fan_cooldown_duration",
-    "valve_open_duration",
-    "valve_interval",
+    "purge_time",
+    "cycle_time",
     "inactivity_timeout",
   ];
 
@@ -85,8 +85,8 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
     heater_on_duration: "Heater ON time (s)",
     heater_off_duration: "Heater OFF pause (s)",
     fan_cooldown_duration: "Fan cooldown (s)",
-    valve_open_duration: "Valve open time (min)",
-    valve_interval: "Valve interval (min)",
+    purge_time: "Purge time (min)",
+    cycle_time: "Cycle time (min)",
     inactivity_timeout: "Screensaver delay (min)",
   };
 

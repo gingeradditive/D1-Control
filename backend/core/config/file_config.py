@@ -10,12 +10,11 @@ DEFAULT_CONFIG = {
     "heater_off_duration": 5,
     "setpoint": 70,
     "fan_cooldown_duration": 120,
-    "valve_open_duration": 1,
-    "valve_interval": 15,
+    "purge_time": 1,
+    "cycle_time": 60,
     "inactivity_timeout": 5,
     "screensaver_delay": 300,
-    "purge_time": 60,
-    "cycle_time": 3600,
+    "pinned_preset_ids": ["pla", "petg"],
 }
 
 
