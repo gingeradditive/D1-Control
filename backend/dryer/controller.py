@@ -143,8 +143,6 @@ class DryerController:
                     self.sensor_fault = False
                     self.errors.pop("sensor_fault", None)
                     print("[DryerController] Sensor fault cleared — readings back to normal.")
-            else:
-                self.errors.clear()
 
             self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
             return now, temperature
