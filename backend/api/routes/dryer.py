@@ -11,7 +11,7 @@ def get_status():
     ts, temp, heater, fan, valve = dryer.get_status_data()
     elapsed = 0
     if dryer.dryer_status and dryer.session_start_time is not None:
-        elapsed = int(time.time() - dryer.session_start_time)
+        elapsed = int(time.monotonic() - dryer.session_start_time)
     return {
         "setpoint": dryer.set_temp,
         "current_temp": round(temp),
