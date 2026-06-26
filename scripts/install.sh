@@ -74,7 +74,6 @@ grep -q "vm.swappiness" /etc/sysctl.conf \
 
 section "PACCHETTI DI SISTEMA"
 sudo apt-get update -y
-sudo apt-get upgrade -y
 
 log "Rimuovo versioni vecchie di Node..."
 sudo apt-get remove --purge -y nodejs npm node-* handlebars \
