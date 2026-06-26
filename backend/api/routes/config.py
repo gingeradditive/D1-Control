@@ -30,22 +30,18 @@ def reload_config():
     controllers["update"] = controllers["update"].__class__(".")
     return {"status": "Success", "message": "Controllers reloaded"}
 
-@router.get("/{key}")
-def get(key: str):
-    return config.get(key, None)
+@router.get("/timezone")
+def get_timezone():
+    try:
+        return {"timezone": system.get_timezone()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/timezone")
 def set_timezone(timezone: str = Form(...)):
     try:
         system.set_timezone(timezone)
         return {"status": "Success", "message": f"Timezone set to {system.get_timezone()}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/timezone")
-def get_timezone():
-    try:
-        return {"timezone": system.get_timezone()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -56,3 +52,7 @@ def factory_reset():
         return {"status": "Success", "message": "Configuration reset to factory defaults"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Factory reset failed: {e}")
+
+@router.get("/{key}")
+def get(key: str):
+    return config.get(key, None)
