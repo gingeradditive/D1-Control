@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
   Button, Typography, Box, IconButton, TextField,
   List, ListItem, ListItemText, ListItemSecondaryAction,
   CircularProgress, Chip, Divider, Tooltip
@@ -37,6 +37,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Edit / Add state
   const [editingId, setEditingId] = useState(null);
@@ -91,6 +92,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
     if (isAdding) {
       api.createPreset(editName.trim(), temp)
         .then(() => {
+          setError(null);
           fetchPresets();
           handleCancelEdit();
           onPresetSaved?.();
@@ -102,6 +104,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
     } else {
       api.updatePreset(editingId, { name: editName.trim(), temperature: temp })
         .then(() => {
+          setError(null);
           fetchPresets();
           handleCancelEdit();
           onPresetSaved?.();
@@ -116,6 +119,8 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
   const handleDelete = (id) => {
     api.deletePreset(id)
       .then(() => {
+        setError(null);
+        setConfirmDeleteId(null);
         fetchPresets();
         onPresetSaved?.();
       })
@@ -163,7 +168,9 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                       onChange={e => !isKiosk && setEditName(e.target.value)}
                       size="small"
                       sx={{ flex: 1 }}
-                      onClick={() => isKiosk && openKeyboard(editName, 'default', val => setEditName(val))}
+                      InputProps={{ readOnly: isKiosk }}
+                      inputProps={{ inputMode: isKiosk ? 'none' : undefined }}
+                      onPointerDown={isKiosk ? (e) => { e.preventDefault(); openKeyboard(editName, 'default', val => setEditName(val)); } : undefined}
                     />
                     <TextField
                       label="Temp (°C)"
@@ -172,8 +179,8 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                       onChange={e => !isKiosk && setEditTemp(e.target.value)}
                       size="small"
                       sx={{ width: 100 }}
-                      InputProps={{ inputProps: { min: 0, max: 70, step: 5 } }}
-                      onClick={() => isKiosk && openKeyboard(editTemp, 'numeric', val => setEditTemp(val))}
+                      InputProps={{ readOnly: isKiosk, inputProps: { min: 0, max: 70, step: 5, inputMode: isKiosk ? 'none' : 'decimal' } }}
+                      onPointerDown={isKiosk ? (e) => { e.preventDefault(); openKeyboard(editTemp, 'numeric', val => setEditTemp(val)); } : undefined}
                     />
                     <IconButton color="primary" onClick={handleSaveEdit} size="small">
                       <SaveIcon />
@@ -230,7 +237,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                         </IconButton>
                         <IconButton
                           edge="end"
-                          onClick={() => handleDelete(preset.id)}
+                          onClick={() => setConfirmDeleteId(preset.id)}
                           size="small"
                           color="error"
                         >
@@ -255,8 +262,10 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                   onChange={e => !isKiosk && setEditName(e.target.value)}
                   size="small"
                   sx={{ flex: 1 }}
-                  autoFocus
-                  onClick={() => isKiosk && openKeyboard(editName, 'default', val => setEditName(val))}
+                  autoFocus={!isKiosk}
+                  InputProps={{ readOnly: isKiosk }}
+                  inputProps={{ inputMode: isKiosk ? 'none' : undefined }}
+                  onPointerDown={isKiosk ? (e) => { e.preventDefault(); openKeyboard(editName, 'default', val => setEditName(val)); } : undefined}
                 />
                 <TextField
                   label="Temp (°C)"
@@ -265,8 +274,8 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                   onChange={e => !isKiosk && setEditTemp(e.target.value)}
                   size="small"
                   sx={{ width: 100 }}
-                  InputProps={{ inputProps: { min: 0, max: 70, step: 5 } }}
-                  onClick={() => isKiosk && openKeyboard(editTemp, 'numeric', val => setEditTemp(val))}
+                  InputProps={{ readOnly: isKiosk, inputProps: { min: 0, max: 70, step: 5, inputMode: isKiosk ? 'none' : 'decimal' } }}
+                  onPointerDown={isKiosk ? (e) => { e.preventDefault(); openKeyboard(editTemp, 'numeric', val => setEditTemp(val)); } : undefined}
                 />
                 <IconButton color="primary" onClick={handleSaveEdit} size="small">
                   <SaveIcon />
@@ -290,6 +299,22 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
         </Button>
         <Box flexGrow={1} />
         <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Confirm Delete Dialog */}
+    <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
+      <DialogTitle>Delete Preset</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Are you sure you want to delete this preset? This action cannot be undone.
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+        <Button onClick={() => handleDelete(confirmDeleteId)} color="error" variant="contained">
+          Delete
+        </Button>
       </DialogActions>
     </Dialog>
   );
