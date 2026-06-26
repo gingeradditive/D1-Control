@@ -12,8 +12,10 @@ except (ImportError, NotImplementedError):
     logger.warning("RPi.GPIO not available, running in simulation mode.")
 
 
-def run_command(command: str, cwd: Path = None, timeout: int = 300) -> str:
+def run_command(command: str, cwd: Path = None, timeout: int = 300, env: dict = None) -> str:
     """Esegue un comando shell e ritorna l'output o solleva un'eccezione"""
+    import os
+    merged_env = {**os.environ, **(env or {})}
     try:
         logger.debug(f"Running: {command} (cwd={cwd})")
         result = subprocess.run(
@@ -22,7 +24,8 @@ def run_command(command: str, cwd: Path = None, timeout: int = 300) -> str:
             cwd=cwd,
             capture_output=True,
             text=True,
-            timeout=timeout
+            timeout=timeout,
+            env=merged_env,
         )
         if result.returncode != 0:
             logger.error(f"Command failed (rc={result.returncode}): {result.stderr.strip()}")
