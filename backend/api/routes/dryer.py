@@ -1,5 +1,5 @@
 import time
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from backend.core.state import controllers
 
@@ -56,6 +56,8 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
 
 @router.post("/setpoint/{value}")
 def set_setpoint(value: float):
+    if not (0 <= value <= 90):
+        raise HTTPException(status_code=422, detail="Setpoint out of range [0, 90]°C")
     dryer = controllers["dryer"]
     dryer.update_setpoint(value)
     return {"setpoint": dryer.set_temp}
@@ -68,6 +70,8 @@ def reset_filter_hours():
 
 @router.post("/filter/set/{hours}")
 def set_filter_hours(hours: float):
+    if hours < 0 or hours > 100000:
+        raise HTTPException(status_code=422, detail="Filter hours out of range [0, 100000]")
     dryer = controllers["dryer"]
     dryer._accumulate_session_hours()
     dryer.filter_hours = hours
