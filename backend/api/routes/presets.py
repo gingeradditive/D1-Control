@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -59,8 +60,22 @@ def _read_user_presets() -> list[dict]:
 
 
 def _write_user_presets(presets: list[dict]) -> None:
-    with open(PRESETS_FILE, "w") as f:
-        json.dump(presets, f, indent=4)
+    dir_ = os.path.dirname(os.path.abspath(PRESETS_FILE))
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, suffix=".tmp") as tmp:
+            json.dump(presets, tmp, indent=4)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+            tmp_path = tmp.name
+        os.replace(tmp_path, PRESETS_FILE)
+    except Exception as e:
+        print(f"[Presets] Errore nel salvare {PRESETS_FILE}: {e}")
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 def _normalize_pinned_ids(ids: list[str], available_ids: set[str]) -> list[str]:

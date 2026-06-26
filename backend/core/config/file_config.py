@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from typing import TypeVar, Type, Any
 
 CONFIG_FILE = "config.json"
@@ -49,11 +50,22 @@ class FileConfig:
             return dict(self.defaults)
 
     def _write(self, data: dict[str, Any]) -> None:
+        dir_ = os.path.dirname(os.path.abspath(self.path))
+        tmp_path = None
         try:
-            with open(self.path, "w") as f:
-                json.dump(data, f, indent=4)
+            with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, suffix=".tmp") as tmp:
+                json.dump(data, tmp, indent=4)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+                tmp_path = tmp.name
+            os.replace(tmp_path, self.path)
         except Exception as e:
             print(f"[Config] Errore nel salvare {self.path}: {e}")
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     def get(self, key: str, default: T, cast_type: Type[T] = str) -> T:
         data = self._read()
