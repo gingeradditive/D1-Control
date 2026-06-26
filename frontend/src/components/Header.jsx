@@ -11,10 +11,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
 import HistoryIcon from '@mui/icons-material/History';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
-// import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
-
 import WifiDialog from './WifiDialog';
-import AlarmDialog from './AlarmDialog';
 import ChartDialog from './ChartDialog';
 import SettingsDialog from './SettingsDialog';
 import StatsDialog from './StatsDialog';
@@ -91,7 +88,6 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
           <IconButton onClick={handleOpen('wifi')}>
             {getWifiIcon(network)}
           </IconButton>
-          {/* <IconButton onClick={handleOpen('alarm')}><AccessAlarmIcon /></IconButton> */}
         </Box>
         <Box display="flex" alignItems="center">
           <IconButton onClick={handleOpen('chart')}><HistoryIcon /></IconButton>
@@ -107,8 +103,6 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
           checkNetworkStatus();
         }}
       />
-
-      <AlarmDialog open={openModal === 'alarm'} onClose={handleClose} />
 
       <ChartDialog
         open={openModal === 'chart'}
