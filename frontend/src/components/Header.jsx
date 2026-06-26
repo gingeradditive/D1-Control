@@ -21,14 +21,8 @@ import StatsDialog from './StatsDialog';
 
 import { api } from '../api'; // Assicurati che l'import sia corretto
 
-const mockChartData = Array.from({ length: 10 }, (_, i) => ({
-  time: `T${i}`,
-  temperature: 20 + i,
-}));
-
 export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange }) {
   const [openModal, setOpenModal] = useState(null);
-  const [range, setRange] = useState('1h');
   const [network, setNetwork] = useState({
     "connected": false,
     "ssid": "",
@@ -119,9 +113,6 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
       <ChartDialog
         open={openModal === 'chart'}
         onClose={handleClose}
-        range={range}
-        setRange={setRange}
-        chartData={mockChartData}
       />
 
       <SettingsDialog
