@@ -21,7 +21,7 @@ def get_networks():
             network_map = {}
             for line in output.strip().split('\n'):
                 if line:
-                    ssid, signal = line.split(":")
+                    ssid, signal = line.split(":", 1)
                     if ssid:
                         signal = int(signal)
                         # mantieni solo la rete con segnale più forte per SSID duplicati
