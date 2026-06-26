@@ -254,7 +254,20 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
       .then(() => {
         setStatus(prev => ({ ...prev, status: !prev.status }));
       })
-      .catch(err => console.error("Errore nel cambio stato:", err));
+      .catch(err => {
+        if (err?.response?.status === 400) {
+          const detail = err.response.data?.detail || "Cannot start: sensor fault detected";
+          enqueueSnackbar(detail, { variant: "error", persist: true,
+            action: (id) => (
+              <IconButton onClick={() => closeSnackbar(id)} size="small">
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            )
+          });
+        } else {
+          console.error("Errore nel cambio stato:", err);
+        }
+      });
   };
 
   return (
