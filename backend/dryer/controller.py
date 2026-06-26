@@ -76,10 +76,10 @@ class DryerController:
         self.valve = Valve()
         self.sensors = Sensors()
 
-        # log file — daily rotation, max 30 files
+        # log file — created lazily on first log() call to avoid a wrong date
+        # if NTP hasn't synced yet at boot time
         self.log_file = None
         self._log_date = None
-        self._open_log(datetime.now())
 
     # --- start / stop ---
     def start(self):
