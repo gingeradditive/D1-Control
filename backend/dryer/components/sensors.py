@@ -44,6 +44,4 @@ class Sensors:
         else:
             self._prev_temp += random.uniform(-0.5, 0.5)
             self._prev_temp = max(15, min(70, self._prev_temp))
-            if random.random() < 0.5:
-                raise OSError("Simulated sensor read error")
             return now, self._prev_temp

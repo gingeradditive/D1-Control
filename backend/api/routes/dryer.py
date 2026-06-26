@@ -1,5 +1,6 @@
 import time
 from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
 from backend.core.state import controllers
 
 router = APIRouter()
@@ -19,12 +20,19 @@ def get_status():
         "status": dryer.dryer_status,
         "valve": valve,
         "errors": dryer.errors,
+        "sensor_fault": dryer.sensor_fault,
         "drying_elapsed_seconds": elapsed,
     }
 
 @router.post("/status/{status}")
 def set_status(status: bool):
     dryer = controllers["dryer"]
+    if status and dryer.sensor_fault:
+        fault_detail = dryer.errors.get("sensor_fault", "Sensor fault detected")
+        return JSONResponse(
+            status_code=400,
+            content={"error": "sensor_fault", "detail": fault_detail},
+        )
     dryer.start() if status else dryer.stop()
     return {"status": "running" if status else "stopped"}
 

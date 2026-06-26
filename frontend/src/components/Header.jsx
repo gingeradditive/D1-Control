@@ -9,7 +9,7 @@ import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
-import TimelineIcon from '@mui/icons-material/Timeline';
+import HistoryIcon from '@mui/icons-material/History';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 // import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
 
@@ -100,7 +100,7 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
           {/* <IconButton onClick={handleOpen('alarm')}><AccessAlarmIcon /></IconButton> */}
         </Box>
         <Box display="flex" alignItems="center">
-          <IconButton onClick={handleOpen('chart')}><TimelineIcon /></IconButton>
+          <IconButton onClick={handleOpen('chart')}><HistoryIcon /></IconButton>
           <IconButton onClick={handleOpen('stats')}><EqualizerIcon /></IconButton>
           <IconButton onClick={handleOpen('settings')}><SettingsIcon /></IconButton>
         </Box>

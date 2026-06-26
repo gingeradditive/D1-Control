@@ -9,6 +9,16 @@ from backend.dryer.components.fan import Fan
 from backend.dryer.components.valve import Valve
 from backend.dryer.components.sensors import Sensors
 
+# Sensor validity range — outside these bounds the reading is treated as a fault.
+# The MAX6675 returns 9999.0 on open-thermocouple; 0.0 on a shorted/disconnected probe.
+SENSOR_TEMP_MIN = 5.0    # °C — below this the probe is disconnected or shorted
+SENSOR_TEMP_MAX = 300.0  # °C — above this the probe is disconnected or the MAX6675 fault bit is set
+
+# Consecutive bad readings before entering fault state, and consecutive good readings to exit it.
+_FAULT_TRIP_COUNT  = 3
+_FAULT_CLEAR_COUNT = 5
+
+
 class DryerController:
     def __init__(self, config):
         self.config = config
@@ -46,6 +56,11 @@ class DryerController:
 
         self.errors = {}
 
+        # sensor fault tracking
+        self.sensor_fault = False
+        self._sensor_bad_streak  = 0
+        self._sensor_good_streak = 0
+
         # components
         self.heater = Heater()
         self.fan = Fan()
@@ -62,6 +77,9 @@ class DryerController:
 
     # --- start / stop ---
     def start(self):
+        if self.sensor_fault:
+            print("[DryerController] Start blocked: sensor fault active.", file=sys.stderr)
+            return False
         if not self.dryer_status:
             self.dryer_status = True
             self.cooldown_active = False
@@ -72,6 +90,7 @@ class DryerController:
             self.valve_last_switch_time = time.time()
             self.last_heater_toggle = time.time()
             print("Dryer started.")
+        return True
 
     def stop(self):
         if self.dryer_status:
@@ -98,18 +117,62 @@ class DryerController:
         return self.valve.is_open()
 
     # --- sensor read ---
+    def _is_temp_valid(self, temp: float) -> bool:
+        return SENSOR_TEMP_MIN <= temp <= SENSOR_TEMP_MAX
+
     def read_sensor(self):
+        now = datetime.now()
+        temperature = None
+
         try:
             now, temperature = self.sensors.read_all()
-            self.errors.clear()
-            self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
-            return now, temperature
         except Exception as e:
             print(f"Sensor read error: {e}", file=sys.stderr)
-            now = datetime.now()
-            if str(e) not in self.errors:
-                self.errors[str(e)] = now
-            return now, 999
+            error_key = str(e)
+            if error_key not in self.errors:
+                self.errors[error_key] = now.isoformat()
+
+        valid = temperature is not None and self._is_temp_valid(temperature)
+
+        if valid:
+            self._sensor_bad_streak = 0
+            self._sensor_good_streak = min(self._sensor_good_streak + 1, _FAULT_CLEAR_COUNT)
+
+            if self.sensor_fault:
+                if self._sensor_good_streak >= _FAULT_CLEAR_COUNT:
+                    self.sensor_fault = False
+                    self.errors.pop("sensor_fault", None)
+                    print("[DryerController] Sensor fault cleared — readings back to normal.")
+            else:
+                self.errors.clear()
+
+            self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
+            return now, temperature
+
+        # --- invalid reading ---
+        self._sensor_good_streak = 0
+        self._sensor_bad_streak += 1
+
+        if temperature is None:
+            fault_desc = "Sensor communication error"
+        elif temperature <= 0:
+            fault_desc = f"Temperature is {temperature:.1f}°C — probe shorted or disconnected"
+        elif temperature < SENSOR_TEMP_MIN:
+            fault_desc = f"Temperature too low: {temperature:.1f}°C (min {SENSOR_TEMP_MIN}°C)"
+        else:
+            fault_desc = f"Temperature too high: {temperature:.1f}°C (max {SENSOR_TEMP_MAX}°C)"
+
+        if not self.sensor_fault and self._sensor_bad_streak >= _FAULT_TRIP_COUNT:
+            self.sensor_fault = True
+            self.errors["sensor_fault"] = fault_desc
+            print(f"[DryerController] SENSOR FAULT: {fault_desc}", file=sys.stderr)
+            if self.dryer_status:
+                print("[DryerController] Emergency stop triggered by sensor fault.", file=sys.stderr)
+                self.stop()
+
+        # Return last known good temperature so update_heater stays safe
+        last_temp = self.history[-1][1] if self.history else self.set_temp
+        return now, last_temp
 
     # --- heater control (pulse heating) ---
     def update_heater(self, temp):
