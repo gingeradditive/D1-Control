@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 
 function formatElapsed(totalSeconds) {
@@ -8,6 +9,26 @@ function formatElapsed(totalSeconds) {
 }
 
 export default function TemperatureDisplay({ currentTemp, setpoint, status, dryingElapsedSeconds }) {
+  const [localElapsed, setLocalElapsed] = useState(dryingElapsedSeconds ?? 0);
+  const intervalRef = useRef(null);
+
+  // Sync from backend value, then tick locally every second
+  useEffect(() => {
+    setLocalElapsed(dryingElapsedSeconds ?? 0);
+  }, [dryingElapsedSeconds]);
+
+  useEffect(() => {
+    if (status) {
+      intervalRef.current = setInterval(() => {
+        setLocalElapsed(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(intervalRef.current);
+      setLocalElapsed(0);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [status]);
+
   // Colori condizionati dallo status
   const ringColor = status ? "#d72e28" : "#ccc";
   const animated = status;
@@ -81,9 +102,9 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
           <Typography variant="body2" color="gray" className="temperature-degree">
             Set {setpoint !== null ? `${setpoint}` : ""}
           </Typography>
-          {status && dryingElapsedSeconds > 0 && (
+          {status && localElapsed > 0 && (
             <Typography variant="caption" color="gray" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
-              {formatElapsed(dryingElapsedSeconds)}
+              {formatElapsed(localElapsed)}
             </Typography>
           )}
         </Box>
