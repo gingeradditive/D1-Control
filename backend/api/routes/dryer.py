@@ -73,7 +73,7 @@ def set_filter_hours(hours: float):
     dryer.filter_hours = hours
     dryer.config.set("filter_operating_hours", round(hours, 4))
     if dryer.dryer_status:
-        dryer.session_start_time = __import__("time").time()
+        dryer.session_start_time = __import__("time").monotonic()
     return {"filter_hours": hours}
 
 @router.get("/purge-time")

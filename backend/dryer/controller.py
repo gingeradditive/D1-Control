@@ -39,20 +39,20 @@ class DryerController:
         self.purge_time = self.config.get("purge_time", 1, int)
         self.cycle_time = self.config.get("cycle_time", 60, int)
 
-        # state
-        self.last_heater_toggle = time.time()
+        # state  (all elapsed timers use monotonic to survive NTP jumps on RPi)
+        self.last_heater_toggle = time.monotonic()
         self.history = deque(maxlen=43200)
-        self.log_timer = time.time()
+        self.log_timer = time.monotonic()
         self.dryer_status = False
         self.fan_cooldown_end = None
         self.cooldown_active = False
-        self.valve_last_switch_time = time.time()
+        self.valve_last_switch_time = time.monotonic()
 
         # operating hours
         self.total_hours = self.config.get("total_operating_hours", 0.0, float)
         self.filter_hours = self.config.get("filter_operating_hours", 0.0, float)
         self.session_start_time = None
-        self._hours_save_timer = time.time()
+        self._hours_save_timer = time.monotonic()
 
         self.errors = {}
 
@@ -84,11 +84,11 @@ class DryerController:
             self.dryer_status = True
             self.cooldown_active = False
             self.fan_cooldown_end = None
-            self.session_start_time = time.time()
+            self.session_start_time = time.monotonic()
             self.fan.on()
             self.valve.close()
-            self.valve_last_switch_time = time.time()
-            self.last_heater_toggle = time.time()
+            self.valve_last_switch_time = time.monotonic()
+            self.last_heater_toggle = time.monotonic()
             print("Dryer started.")
         return True
 
@@ -98,7 +98,7 @@ class DryerController:
             self.dryer_status = False
             self.heater.off()
             print("Dryer stopped.")
-            self.fan_cooldown_end = time.time() + self.fan_cooldown_duration
+            self.fan_cooldown_end = time.monotonic() + self.fan_cooldown_duration
             self.cooldown_active = True
             self.valve.close()
             print("Fan cooldown started.")
@@ -180,7 +180,7 @@ class DryerController:
             self.heater.off()
             return
 
-        now = time.time()
+        now = time.monotonic()
         needs_heat = temp < (self.set_temp - self.tolerance)
         at_or_above = temp >= self.set_temp
 
@@ -215,9 +215,12 @@ class DryerController:
             print(f"[DryerController] Log error: {e}")
 
     # --- operating hours ---
+    _MAX_ELAPSED_HOURS = 24.0  # sanity cap: a single accumulation can't exceed 24h
+
     def _accumulate_session_hours(self):
         if self.session_start_time is not None:
-            elapsed = (time.time() - self.session_start_time) / 3600.0
+            elapsed = (time.monotonic() - self.session_start_time) / 3600.0
+            elapsed = min(elapsed, self._MAX_ELAPSED_HOURS)
             self.total_hours += elapsed
             self.filter_hours += elapsed
             self.config.set("total_operating_hours", round(self.total_hours, 4))
@@ -227,7 +230,7 @@ class DryerController:
     def get_operating_hours(self):
         partial = 0.0
         if self.dryer_status and self.session_start_time is not None:
-            partial = (time.time() - self.session_start_time) / 3600.0
+            partial = (time.monotonic() - self.session_start_time) / 3600.0
         return {
             "partial_hours": round(partial, 4),
             "total_hours": round(self.total_hours + partial, 4),
@@ -236,7 +239,7 @@ class DryerController:
 
     def periodic_save_hours(self):
         if self.dryer_status and self.session_start_time is not None:
-            now = time.time()
+            now = time.monotonic()
             if now - self._hours_save_timer >= 300:
                 elapsed = (now - self.session_start_time) / 3600.0
                 self.config.set("total_operating_hours", round(self.total_hours + elapsed, 4))
@@ -248,7 +251,7 @@ class DryerController:
         self.filter_hours = 0.0
         self.config.set("filter_operating_hours", 0.0)
         if self.dryer_status:
-            self.session_start_time = time.time()
+            self.session_start_time = time.monotonic()
 
     def shutdown(self):
         self._accumulate_session_hours()
@@ -329,14 +332,14 @@ class DryerController:
 
     def update_fan_cooldown(self):
         if self.cooldown_active and not self.dryer_status and self.fan_cooldown_end:
-            if time.time() >= self.fan_cooldown_end:
+            if time.monotonic() >= self.fan_cooldown_end:
                 self.fan.off()
                 self.cooldown_active = False
                 print("Fan turned off after cooldown.")
 
     def update_valve(self):
         if self.dryer_status:
-            now = time.time()
+            now = time.monotonic()
             if self.valve.is_open():
                 if now - self.valve_last_switch_time >= self.purge_time * 60:
                     self.valve.close()

@@ -9,7 +9,7 @@ def background_loop(controllers, is_running):
         dryer.update_heater(temperature)
         dryer.periodic_save_hours()
 
-        if time.time() - dryer.log_timer >= 10:
-            dryer.log_timer = time.time()
+        if time.monotonic() - dryer.log_timer >= 10:
+            dryer.log_timer = time.monotonic()
             dryer.log(now.strftime('%Y-%m-%d %H:%M:%S'), temperature)
         time.sleep(1)
