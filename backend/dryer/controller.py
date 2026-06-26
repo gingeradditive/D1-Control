@@ -1,4 +1,6 @@
 # backend/dryer/controller.py
+import glob
+import os
 import time
 from datetime import datetime, timedelta
 from collections import deque
@@ -17,6 +19,8 @@ SENSOR_TEMP_MAX = 300.0  # °C — above this the probe is disconnected or the M
 # Consecutive bad readings before entering fault state, and consecutive good readings to exit it.
 _FAULT_TRIP_COUNT  = 3
 _FAULT_CLEAR_COUNT = 5
+
+_LOG_MAX_FILES = 30
 
 
 class DryerController:
@@ -72,13 +76,10 @@ class DryerController:
         self.valve = Valve()
         self.sensors = Sensors()
 
-        # log file
-        self.log_file = f"logs/temperature_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        try:
-            with open(self.log_file, "w") as f:
-                f.write("timestamp;temperature;ssr_heater;ssr_fan;setpoint;valve\n")
-        except Exception as e:
-            print(f"[DryerController] Cannot create log file: {e}")
+        # log file — daily rotation, max 30 files
+        self.log_file = None
+        self._log_date = None
+        self._open_log(datetime.now())
 
     # --- start / stop ---
     def start(self):
@@ -210,7 +211,25 @@ class DryerController:
                     print(f"Heater ON (temp: {temp:.1f}°C, target: {self.set_temp:.1f}°C)")
 
     # --- logging ---
+    def _open_log(self, date: datetime):
+        self.log_file = f"logs/temperature_{date.strftime('%Y-%m-%d')}.csv"
+        self._log_date = date.date()
+        if not os.path.exists(self.log_file):
+            try:
+                with open(self.log_file, "w") as f:
+                    f.write("timestamp;temperature;ssr_heater;ssr_fan;setpoint;valve\n")
+            except Exception as e:
+                print(f"[DryerController] Cannot create log file: {e}")
+        files = sorted(glob.glob("logs/temperature_*.csv"))
+        for old in files[:-_LOG_MAX_FILES]:
+            try:
+                os.remove(old)
+            except Exception:
+                pass
+
     def log(self, timestamp, temperature):
+        if timestamp.date() != self._log_date:
+            self._open_log(timestamp)
         try:
             with open(self.log_file, "a") as f:
                 f.write(f"{timestamp};{temperature:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
