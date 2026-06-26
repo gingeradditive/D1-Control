@@ -239,7 +239,7 @@ class DryerController:
         if self.dryer_status and self.session_start_time is not None:
             now = time.monotonic()
             if now - self._hours_save_timer >= 300:
-                elapsed = (now - self.session_start_time) / 3600.0
+                elapsed = min((now - self.session_start_time) / 3600.0, self._MAX_ELAPSED_HOURS)
                 self.config.set("total_operating_hours", round(self.total_hours + elapsed, 4))
                 self.config.set("filter_operating_hours", round(self.filter_hours + elapsed, 4))
                 self._hours_save_timer = now
