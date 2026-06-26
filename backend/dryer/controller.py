@@ -61,7 +61,12 @@ class DryerController:
         self._sensor_bad_streak  = 0
         self._sensor_good_streak = 0
 
-        # components
+        # components — GPIO mode must be set once before any component setup
+        try:
+            import RPi.GPIO as GPIO
+            GPIO.setmode(GPIO.BCM)
+        except (ImportError, NotImplementedError):
+            pass
         self.heater = Heater()
         self.fan = Fan()
         self.valve = Valve()

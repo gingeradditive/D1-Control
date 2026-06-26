@@ -11,7 +11,6 @@ class Fan:
         self.gpio_pin = gpio_pin
         self._is_on = False
         if IS_RASPBERRY:
-            GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.gpio_pin, GPIO.OUT)
             GPIO.output(self.gpio_pin, GPIO.LOW)
 
