@@ -288,6 +288,7 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
         heater={status.heater}
         fan={status.fan}
         valve={status.valve}
+        sensorFault={status.sensor_fault}
         onStatusChange={handleStatusChange}
         presets={presets}
         pinnedPresetIds={pinnedPresetIds}

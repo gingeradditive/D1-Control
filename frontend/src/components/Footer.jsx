@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Switch, styled, Button, keyframes } from "@mui/material";
+import { Box, Typography, Switch, styled, Button, keyframes, Tooltip } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckLight from './CheckLight';
 
 const marqueeScroll = keyframes`
@@ -71,7 +72,7 @@ const StyledSwitch = styled(Switch)(({ theme }) => ({
   },
 }));
 
-export default function Footer({ status, onStatusChange, heater, fan, valve, presets = [], pinnedPresetIds = [], activePresetId, onPresetSelect }) {
+export default function Footer({ status, onStatusChange, heater, fan, valve, sensorFault = false, presets = [], pinnedPresetIds = [], activePresetId, onPresetSelect }) {
   const [checked, setChecked] = useState(status);
 
   // Sync internal state with external prop
@@ -144,7 +145,12 @@ export default function Footer({ status, onStatusChange, heater, fan, valve, pre
           valveOpen={valve}
         />
         <Box position="relative" display="flex" justifyContent="end" alignItems="center" ml={3}>
-          <StyledSwitch checked={checked} onChange={handleChange} />
+          {sensorFault && (
+            <Tooltip title="Sensor fault — dryer cannot start" placement="top">
+              <WarningAmberIcon sx={{ color: 'orange', fontSize: 22, mr: 0.5 }} />
+            </Tooltip>
+          )}
+          <StyledSwitch checked={checked} onChange={handleChange} disabled={sensorFault} />
           <Box
             position="absolute"
             left={checked ? 37 : 4.5}
