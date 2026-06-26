@@ -23,18 +23,17 @@ def set_config(key: str = Form(...), value: str = Form(...)):
 
 @router.get("/reload")
 def reload_config():
-    from backend.core.state import controllers
+    from backend.core.state import controllers, PROJECT_ROOT
 
-    config = controllers["config"]
+    cfg = controllers["config"]
 
-    # Properly cleanup the old dryer controller before creating a new one
     old_dryer = controllers.get("dryer")
     if old_dryer:
         old_dryer.shutdown()
-    
-    controllers["dryer"] = controllers["dryer"].__class__(config)
+
+    controllers["dryer"] = controllers["dryer"].__class__(cfg)
     controllers["network"] = controllers["network"].__class__()
-    controllers["update"] = controllers["update"].__class__(".")
+    controllers["update"] = controllers["update"].__class__(str(PROJECT_ROOT))
     return {"status": "Success", "message": "Controllers reloaded"}
 
 @router.get("/timezone")
