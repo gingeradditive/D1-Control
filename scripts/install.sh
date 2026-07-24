@@ -54,12 +54,20 @@ section "SWAP"
 SWAPFILE=/swapfile
 if [ ! -f "$SWAPFILE" ]; then
     log "Creo swapfile da 1GB..."
-    sudo fallocate -l 1G "$SWAPFILE"
-    sudo chmod 600 "$SWAPFILE"
-    sudo mkswap -f "$SWAPFILE"
-    sudo swapon "$SWAPFILE"
+    # CustoPiZer builda in chroot condividendo /proc con l'host della CI, che
+    # tiene attivo un proprio /swapfile: comparendo in /proc/swaps con lo stesso
+    # path, mkswap/swapon lo vedono "montato" e si rifiutano. Scrivo la firma su
+    # un file temporaneo (path diverso → nessuna collisione) e poi lo rinomino,
+    # così l'immagine contiene una swap valida.
+    sudo fallocate -l 1G "$SWAPFILE.new"
+    sudo chmod 600 "$SWAPFILE.new"
+    sudo mkswap "$SWAPFILE.new"
+    sudo mv "$SWAPFILE.new" "$SWAPFILE"
+    # In build swapon non è possibile/necessario: la voce in fstab attiva la
+    # swap al boot reale del dispositivo.
+    sudo swapon "$SWAPFILE" || warn "swapon saltato (ambiente build/chroot)"
     grep -q "$SWAPFILE" /etc/fstab || echo "$SWAPFILE none swap sw 0 0" | sudo tee -a /etc/fstab
-    log "Swap da 1GB attivata"
+    log "Swap da 1GB configurata"
 else
     warn "Swapfile già presente, salto"
 fi
