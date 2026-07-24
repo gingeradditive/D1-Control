@@ -56,7 +56,7 @@ if [ ! -f "$SWAPFILE" ]; then
     log "Creo swapfile da 1GB..."
     sudo fallocate -l 1G "$SWAPFILE"
     sudo chmod 600 "$SWAPFILE"
-    sudo mkswap "$SWAPFILE"
+    sudo mkswap -f "$SWAPFILE"
     sudo swapon "$SWAPFILE"
     grep -q "$SWAPFILE" /etc/fstab || echo "$SWAPFILE none swap sw 0 0" | sudo tee -a /etc/fstab
     log "Swap da 1GB attivata"
