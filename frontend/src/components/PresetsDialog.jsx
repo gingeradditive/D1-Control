@@ -135,6 +135,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
   };
 
   return (
+    <>
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         <Box display="flex" alignItems="center">
@@ -317,5 +318,6 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
         </Button>
       </DialogActions>
     </Dialog>
+    </>
   );
 }
