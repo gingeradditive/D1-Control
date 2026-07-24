@@ -13,7 +13,6 @@ class Heater:
         self.gpio_pin = gpio_pin
         self._is_on = False
         if IS_RASPBERRY:
-            GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.gpio_pin, GPIO.OUT)
             GPIO.output(self.gpio_pin, GPIO.LOW)
 
@@ -23,7 +22,7 @@ class Heater:
             GPIO.setup(self.gpio_pin, GPIO.OUT)
             # Clean edge: ensure LOW before going HIGH
             GPIO.output(self.gpio_pin, GPIO.LOW)
-            time.sleep(0.05)
+            time.sleep(0.005)
             GPIO.output(self.gpio_pin, GPIO.HIGH)
             # Verify pin state
             state = GPIO.input(self.gpio_pin)

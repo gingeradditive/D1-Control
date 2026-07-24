@@ -11,7 +11,7 @@ def git_pull(project_path: Path) -> str:
     mark_directory_safe(project_path)
     run_command("git reset --hard HEAD", cwd=project_path)
     run_command("git clean -fd", cwd=project_path)
-    return run_command("git pull", cwd=project_path)
+    return run_command("git pull", cwd=project_path, env={"LANG": "C", "LC_ALL": "C"})
 
 
 def get_current_version(project_path: Path) -> dict:

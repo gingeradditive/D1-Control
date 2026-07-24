@@ -1,4 +1,6 @@
 # backend/dryer/controller.py
+import glob
+import os
 import time
 from datetime import datetime, timedelta
 from collections import deque
@@ -8,6 +10,18 @@ from backend.dryer.components.heater import Heater
 from backend.dryer.components.fan import Fan
 from backend.dryer.components.valve import Valve
 from backend.dryer.components.sensors import Sensors
+
+# Sensor validity range — outside these bounds the reading is treated as a fault.
+# The MAX6675 returns 9999.0 on open-thermocouple; 0.0 on a shorted/disconnected probe.
+SENSOR_TEMP_MIN = 5.0    # °C — below this the probe is disconnected or shorted
+SENSOR_TEMP_MAX = 300.0  # °C — above this the probe is disconnected or the MAX6675 fault bit is set
+
+# Consecutive bad readings before entering fault state, and consecutive good readings to exit it.
+_FAULT_TRIP_COUNT  = 3
+_FAULT_CLEAR_COUNT = 5
+
+_LOG_MAX_FILES = 30
+
 
 class DryerController:
     def __init__(self, config):
@@ -29,49 +43,60 @@ class DryerController:
         self.purge_time = self.config.get("purge_time", 1, int)
         self.cycle_time = self.config.get("cycle_time", 60, int)
 
-        # state
-        self.last_heater_toggle = time.time()
+        # state  (all elapsed timers use monotonic to survive NTP jumps on RPi)
+        self.last_heater_toggle = time.monotonic()
         self.history = deque(maxlen=43200)
-        self.log_timer = time.time()
+        self.log_timer = time.monotonic()
         self.dryer_status = False
         self.fan_cooldown_end = None
         self.cooldown_active = False
-        self.valve_last_switch_time = time.time()
+        self.valve_last_switch_time = time.monotonic()
 
         # operating hours
         self.total_hours = self.config.get("total_operating_hours", 0.0, float)
         self.filter_hours = self.config.get("filter_operating_hours", 0.0, float)
         self.session_start_time = None
-        self._hours_save_timer = time.time()
+        self._hours_save_timer = time.monotonic()
 
         self.errors = {}
 
-        # components
+        # sensor fault tracking
+        self.sensor_fault = False
+        self._sensor_bad_streak  = 0
+        self._sensor_good_streak = 0
+
+        # components — GPIO mode must be set once before any component setup
+        try:
+            import RPi.GPIO as GPIO
+            GPIO.setmode(GPIO.BCM)
+        except (ImportError, NotImplementedError):
+            pass
         self.heater = Heater()
         self.fan = Fan()
         self.valve = Valve()
         self.sensors = Sensors()
 
-        # log file
-        self.log_file = f"logs/temperature_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        try:
-            with open(self.log_file, "w") as f:
-                f.write("timestamp;temperature;ssr_heater;ssr_fan;setpoint;valve\n")
-        except Exception as e:
-            print(f"[DryerController] Cannot create log file: {e}")
+        # log file — created lazily on first log() call to avoid a wrong date
+        # if NTP hasn't synced yet at boot time
+        self.log_file = None
+        self._log_date = None
 
     # --- start / stop ---
     def start(self):
+        if self.sensor_fault:
+            print("[DryerController] Start blocked: sensor fault active.", file=sys.stderr)
+            return False
         if not self.dryer_status:
             self.dryer_status = True
             self.cooldown_active = False
             self.fan_cooldown_end = None
-            self.session_start_time = time.time()
+            self.session_start_time = time.monotonic()
             self.fan.on()
             self.valve.close()
-            self.valve_last_switch_time = time.time()
-            self.last_heater_toggle = time.time()
+            self.valve_last_switch_time = time.monotonic()
+            self.last_heater_toggle = time.monotonic()
             print("Dryer started.")
+        return True
 
     def stop(self):
         if self.dryer_status:
@@ -79,7 +104,7 @@ class DryerController:
             self.dryer_status = False
             self.heater.off()
             print("Dryer stopped.")
-            self.fan_cooldown_end = time.time() + self.fan_cooldown_duration
+            self.fan_cooldown_end = time.monotonic() + self.fan_cooldown_duration
             self.cooldown_active = True
             self.valve.close()
             print("Fan cooldown started.")
@@ -98,18 +123,60 @@ class DryerController:
         return self.valve.is_open()
 
     # --- sensor read ---
+    def _is_temp_valid(self, temp: float) -> bool:
+        return SENSOR_TEMP_MIN <= temp <= SENSOR_TEMP_MAX
+
     def read_sensor(self):
+        now = datetime.now()
+        temperature = None
+
         try:
             now, temperature = self.sensors.read_all()
-            self.errors.clear()
-            self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
-            return now, temperature
         except Exception as e:
             print(f"Sensor read error: {e}", file=sys.stderr)
-            now = datetime.now()
-            if str(e) not in self.errors:
-                self.errors[str(e)] = now
-            return now, 999
+            error_key = str(e)
+            if error_key not in self.errors:
+                self.errors[error_key] = now.isoformat()
+
+        valid = temperature is not None and self._is_temp_valid(temperature)
+
+        if valid:
+            self._sensor_bad_streak = 0
+            self._sensor_good_streak = min(self._sensor_good_streak + 1, _FAULT_CLEAR_COUNT)
+
+            if self.sensor_fault:
+                if self._sensor_good_streak >= _FAULT_CLEAR_COUNT:
+                    self.sensor_fault = False
+                    self.errors.pop("sensor_fault", None)
+                    print("[DryerController] Sensor fault cleared — readings back to normal.")
+
+            self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
+            return now, temperature
+
+        # --- invalid reading ---
+        self._sensor_good_streak = 0
+        self._sensor_bad_streak += 1
+
+        if temperature is None:
+            fault_desc = "Sensor communication error"
+        elif temperature <= 0:
+            fault_desc = f"Temperature is {temperature:.1f}°C — probe shorted or disconnected"
+        elif temperature < SENSOR_TEMP_MIN:
+            fault_desc = f"Temperature too low: {temperature:.1f}°C (min {SENSOR_TEMP_MIN}°C)"
+        else:
+            fault_desc = f"Temperature too high: {temperature:.1f}°C (max {SENSOR_TEMP_MAX}°C)"
+
+        if not self.sensor_fault and self._sensor_bad_streak >= _FAULT_TRIP_COUNT:
+            self.sensor_fault = True
+            self.errors["sensor_fault"] = fault_desc
+            print(f"[DryerController] SENSOR FAULT: {fault_desc}", file=sys.stderr)
+            if self.dryer_status:
+                print("[DryerController] Emergency stop triggered by sensor fault.", file=sys.stderr)
+                self.stop()
+
+        # Return last known good temperature so update_heater stays safe
+        last_temp = self.history[-1][1] if self.history else self.set_temp
+        return now, last_temp
 
     # --- heater control (pulse heating) ---
     def update_heater(self, temp):
@@ -117,7 +184,7 @@ class DryerController:
             self.heater.off()
             return
 
-        now = time.time()
+        now = time.monotonic()
         needs_heat = temp < (self.set_temp - self.tolerance)
         at_or_above = temp >= self.set_temp
 
@@ -144,7 +211,25 @@ class DryerController:
                     print(f"Heater ON (temp: {temp:.1f}°C, target: {self.set_temp:.1f}°C)")
 
     # --- logging ---
+    def _open_log(self, date: datetime):
+        self.log_file = f"logs/temperature_{date.strftime('%Y-%m-%d')}.csv"
+        self._log_date = date.date()
+        if not os.path.exists(self.log_file):
+            try:
+                with open(self.log_file, "w") as f:
+                    f.write("timestamp;temperature;ssr_heater;ssr_fan;setpoint;valve\n")
+            except Exception as e:
+                print(f"[DryerController] Cannot create log file: {e}")
+        files = sorted(glob.glob("logs/temperature_*.csv"))
+        for old in files[:-_LOG_MAX_FILES]:
+            try:
+                os.remove(old)
+            except Exception:
+                pass
+
     def log(self, timestamp, temperature):
+        if timestamp.date() != self._log_date:
+            self._open_log(timestamp)
         try:
             with open(self.log_file, "a") as f:
                 f.write(f"{timestamp};{temperature:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
@@ -152,9 +237,12 @@ class DryerController:
             print(f"[DryerController] Log error: {e}")
 
     # --- operating hours ---
+    _MAX_ELAPSED_HOURS = 24.0  # sanity cap: a single accumulation can't exceed 24h
+
     def _accumulate_session_hours(self):
         if self.session_start_time is not None:
-            elapsed = (time.time() - self.session_start_time) / 3600.0
+            elapsed = (time.monotonic() - self.session_start_time) / 3600.0
+            elapsed = min(elapsed, self._MAX_ELAPSED_HOURS)
             self.total_hours += elapsed
             self.filter_hours += elapsed
             self.config.set("total_operating_hours", round(self.total_hours, 4))
@@ -164,7 +252,7 @@ class DryerController:
     def get_operating_hours(self):
         partial = 0.0
         if self.dryer_status and self.session_start_time is not None:
-            partial = (time.time() - self.session_start_time) / 3600.0
+            partial = (time.monotonic() - self.session_start_time) / 3600.0
         return {
             "partial_hours": round(partial, 4),
             "total_hours": round(self.total_hours + partial, 4),
@@ -173,9 +261,9 @@ class DryerController:
 
     def periodic_save_hours(self):
         if self.dryer_status and self.session_start_time is not None:
-            now = time.time()
+            now = time.monotonic()
             if now - self._hours_save_timer >= 300:
-                elapsed = (now - self.session_start_time) / 3600.0
+                elapsed = min((now - self.session_start_time) / 3600.0, self._MAX_ELAPSED_HOURS)
                 self.config.set("total_operating_hours", round(self.total_hours + elapsed, 4))
                 self.config.set("filter_operating_hours", round(self.filter_hours + elapsed, 4))
                 self._hours_save_timer = now
@@ -185,7 +273,7 @@ class DryerController:
         self.filter_hours = 0.0
         self.config.set("filter_operating_hours", 0.0)
         if self.dryer_status:
-            self.session_start_time = time.time()
+            self.session_start_time = time.monotonic()
 
     def shutdown(self):
         self._accumulate_session_hours()
@@ -266,14 +354,14 @@ class DryerController:
 
     def update_fan_cooldown(self):
         if self.cooldown_active and not self.dryer_status and self.fan_cooldown_end:
-            if time.time() >= self.fan_cooldown_end:
+            if time.monotonic() >= self.fan_cooldown_end:
                 self.fan.off()
                 self.cooldown_active = False
                 print("Fan turned off after cooldown.")
 
     def update_valve(self):
         if self.dryer_status:
-            now = time.time()
+            now = time.monotonic()
             if self.valve.is_open():
                 if now - self.valve_last_switch_time >= self.purge_time * 60:
                     self.valve.close()

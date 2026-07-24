@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 config = FileConfig()
 
 controllers = {
-    "config": FileConfig(),
+    "config": config,
     "dryer": DryerController(config),
     "network": NetworkController(),
     "update": UpdateController(str(PROJECT_ROOT)),

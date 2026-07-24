@@ -1,59 +1,117 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+log()  { echo -e "${GREEN}[✔]${NC} $*"; }
+warn() { echo -e "${YELLOW}[!]${NC} $*"; }
+err()  { echo -e "${RED}[✘]${NC} $*" >&2; }
+section() { echo -e "\n${BLUE}━━━ $* ━━━${NC}"; }
+
+trap 'err "Errore alla linea $LINENO — installazione interrotta."; exit 1' ERR
+
+# ─── Variabili ────────────────────────────────────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+USERNAME="pi"
+VENV="$PROJECT_DIR/venv"
+LOG_DIR="$PROJECT_DIR/logs"
+
+# Compatibilità Bullseye (/boot/config.txt) e Bookworm (/boot/firmware/config.txt)
+if [ -f /boot/firmware/config.txt ]; then
+    BOOT_CONFIG=/boot/firmware/config.txt
+else
+    BOOT_CONFIG=/boot/config.txt
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "=== 🛠️ INSTALLAZIONE SISTEMA KIOSK ==="
+section "AVVIO INSTALLAZIONE SISTEMA KIOSK"
+log "PROJECT_DIR: $PROJECT_DIR"
+log "Boot config: $BOOT_CONFIG"
 
-PROJECT_DIR=$(pwd)
-USERNAME="pi"
+# ─── Utente ───────────────────────────────────────────────────────────────────
 
-echo "� Creo utente 'pi' con password 'raspberry'..."
+section "UTENTE"
 if ! id "$USERNAME" &>/dev/null; then
     sudo useradd -m -s /bin/bash "$USERNAME"
     echo "$USERNAME:raspberry" | sudo chpasswd
     sudo usermod -aG sudo "$USERNAME"
-    echo "✅ Utente '$USERNAME' creato con successo"
+    log "Utente '$USERNAME' creato"
 else
-    echo "ℹ️ Utente '$USERNAME' già esistente, aggiorno password..."
+    warn "Utente '$USERNAME' già esistente, aggiorno password"
     echo "$USERNAME:raspberry" | sudo chpasswd
 fi
 
-echo "👤 Aggiungo '$USERNAME' al gruppo autologin..."
 sudo groupadd -f autologin
 sudo usermod -aG autologin "$USERNAME"
 
-echo "�📦 Aggiorno sistema e installo pacchetti base..."
-sudo apt-get update -y
-sudo apt-get upgrade -y
+# ─── Swap (aumenta stabilità su RPi con poca RAM) ─────────────────────────────
 
-echo "📦 Aggiorno Node..."
-sudo apt-get remove --purge -y nodejs npm node-* handlebars node-ansi-escapes node-argparse node-chokidar node-es-abstract node-eslint-scope node-file-entry-cache node-flat-cache node-for-in node-functional-red-black-tree node-is-extendable node-jest-worker node-jsesc node-neo-async node-regenerate node-source-map-support node-strip-json-comments node-to-regex-range node-unique-filename || true
+section "SWAP"
+SWAPFILE=/swapfile
+if [ ! -f "$SWAPFILE" ]; then
+    log "Creo swapfile da 1GB..."
+    sudo fallocate -l 1G "$SWAPFILE"
+    sudo chmod 600 "$SWAPFILE"
+    sudo mkswap "$SWAPFILE"
+    sudo swapon "$SWAPFILE"
+    grep -q "$SWAPFILE" /etc/fstab || echo "$SWAPFILE none swap sw 0 0" | sudo tee -a /etc/fstab
+    log "Swap da 1GB attivata"
+else
+    warn "Swapfile già presente, salto"
+fi
+
+# Riduci swappiness: il kernel evita di usare swap se possibile
+sudo sysctl -q vm.swappiness=10
+grep -q "vm.swappiness" /etc/sysctl.conf \
+    && sudo sed -i 's/^vm.swappiness=.*/vm.swappiness=10/' /etc/sysctl.conf \
+    || echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
+
+# ─── Pacchetti di sistema ─────────────────────────────────────────────────────
+
+section "PACCHETTI DI SISTEMA"
+sudo apt-get update -y
+
+log "Rimuovo versioni vecchie di Node..."
+sudo apt-get remove --purge -y nodejs npm node-* handlebars \
+    node-ansi-escapes node-argparse node-chokidar node-es-abstract \
+    node-eslint-scope node-file-entry-cache node-flat-cache node-for-in \
+    node-functional-red-black-tree node-is-extendable node-jest-worker \
+    node-jsesc node-neo-async node-regenerate node-source-map-support \
+    node-strip-json-comments node-to-regex-range node-unique-filename 2>/dev/null || true
 sudo apt-get autoremove -y || true
-sudo apt-get autoclean || true
+sudo apt-get autoclean
+
+log "Installo Node.js 20..."
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
+log "Installo pacchetti kiosk..."
 sudo apt-get install --no-install-recommends -y \
-xserver-xorg \
-x11-xserver-utils \
-xinit \
-openbox \
-lightdm \
-lightdm-gtk-greeter \
-unclutter \
-chromium-browser \
-python3-venv \
-python3-pip \
-git \
-curl \
-accountsservice
+    xserver-xorg \
+    x11-xserver-utils \
+    xinit \
+    openbox \
+    lightdm \
+    lightdm-gtk-greeter \
+    unclutter \
+    chromium-browser \
+    python3-venv \
+    python3-pip \
+    git \
+    curl \
+    accountsservice \
+    pigpio \
+    nginx
 
-# Imposta LightDM per login automatico in grafica
-echo "🖥️ Configuro LightDM per login automatico..."
-sudo mkdir -p /etc/lightdm
+# ─── LightDM — login automatico ───────────────────────────────────────────────
 
-# File principale lightdm.conf (come nel tuo script)
+section "LIGHTDM AUTOLOGIN"
+sudo mkdir -p /etc/lightdm/lightdm.conf.d
+
 sudo tee /etc/lightdm/lightdm.conf > /dev/null <<EOF
 [Seat:*]
 autologin-user=$USERNAME
@@ -62,9 +120,7 @@ autologin-session=openbox
 user-session=openbox
 EOF
 
-# File aggiuntivo richiesto (lightdm.conf.d)
-sudo mkdir -p /etc/lightdm/lightdm.conf.d
-sudo tee /etc/lightdm/lightdm.conf.d/50-autologin.conf >/dev/null <<EOF
+sudo tee /etc/lightdm/lightdm.conf.d/50-autologin.conf > /dev/null <<EOF
 [Seat:*]
 autologin-user=$USERNAME
 autologin-user-timeout=0
@@ -72,93 +128,177 @@ autologin-session=openbox
 user-session=openbox
 EOF
 
-echo " Creo ambiente virtuale Python..."
-python3 -m venv venv
-source venv/bin/activate
+# ─── Python venv ──────────────────────────────────────────────────────────────
 
-echo "📦 Installo dipendenze Python da requirements.txt..."
+section "PYTHON VENV"
+cd "$PROJECT_DIR"
+python3 -m venv "$VENV"
+source "$VENV/bin/activate"
+
 pip install --upgrade pip
-if [ -f "requirements.txt" ]; then
-    echo "📦 Tentativo 1: installazione da piwheels + pypi"
-    if ! pip install -r requirements.txt --default-timeout=100; then
-        echo "⚠️ Ritento (2/3) usando solo PyPI..."
-        if ! pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100; then
-            echo "⚠️ Ritento (3/3) con DNS Google..."
+
+if [ -f requirements.txt ]; then
+    log "Installazione dipendenze Python (tentativo 1/3)..."
+    if ! pip install -r requirements.txt --default-timeout=120; then
+        warn "Ritento (2/3) con PyPI diretto..."
+        if ! pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=120; then
+            warn "Ritento (3/3) con DNS Google..."
             echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null || true
-            pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=100
+            pip install -r requirements.txt --index-url https://pypi.org/simple --default-timeout=120
         fi
     fi
 else
-    echo "⚠️ Nessun requirements.txt trovato, salto installazione pacchetti Python."
+    warn "Nessun requirements.txt trovato"
 fi
 
-echo "📦 Installo dipendenze npm per il frontend..."
+deactivate
+
+# ─── Frontend build ───────────────────────────────────────────────────────────
+
+section "FRONTEND BUILD"
 if [ -d "$PROJECT_DIR/frontend" ]; then
     cd "$PROJECT_DIR/frontend"
     npm install --no-audit --no-fund
-    if npm run | grep -q "build"; then
-        npm run build
-    else
-        echo "⚠️ Nessuno script build trovato in package.json."
-    fi
+    npm run build
     cd "$PROJECT_DIR"
+    log "Frontend buildato"
 else
-    echo "⚠️ Cartella frontend non trovata, salto build."
+    warn "Cartella frontend non trovata"
 fi
 
-echo "📦 Installo globalmente il server statico serve..."
+log "Installo server statico serve..."
 sudo npm install -g serve
 SERVE_PATH=$(which serve)
-echo "serve trovato in: $SERVE_PATH"
+log "serve: $SERVE_PATH"
 
-echo "=== ⚙️ CONFIGURO SERVIZI SYSTEMD ==="
+# ─── Cartella log ─────────────────────────────────────────────────────────────
 
-# Backend FastAPI service
+section "LOG"
+mkdir -p "$LOG_DIR"
+chown "$USERNAME:$USERNAME" "$LOG_DIR" 2>/dev/null || true
+
+# ─── Journald — limite dimensione log su SD card ──────────────────────────────
+
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/size-limit.conf > /dev/null <<EOF
+[Journal]
+SystemMaxUse=100M
+SystemKeepFree=200M
+MaxRetentionSec=7day
+EOF
+sudo systemctl restart systemd-journald || true
+
+# ─── Servizi systemd ──────────────────────────────────────────────────────────
+
+section "SERVIZI SYSTEMD"
+
+# Backend FastAPI
 sudo tee /etc/systemd/system/dryer-backend.service > /dev/null <<EOF
 [Unit]
 Description=Dryer Backend (FastAPI)
-After=network.target
+Documentation=https://github.com/gingeradditive/D1-Control
+After=network.target pigpiod.service
+Wants=pigpiod.service
 
 [Service]
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$PROJECT_DIR/venv/bin/python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-Restart=always
+Environment=PYTHONUNBUFFERED=1
+ExecStart=$VENV/bin/python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level warning
+ExecStop=/bin/kill -SIGTERM \$MAINPID
+
+# Riavvio automatico: solo su crash, non su stop intenzionale
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+# Shutdown pulito
+TimeoutStartSec=60
+TimeoutStopSec=15
+KillSignal=SIGTERM
+KillMode=mixed
+
+# Log su journald (niente file su SD per evitare usura)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dryer-backend
+
+# Limiti risorse per RPi
+LimitNOFILE=65536
+MemoryMax=400M
+MemorySwapMax=100M
+Nice=0
+
+# Hardening minimale
+NoNewPrivileges=yes
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-# Frontend serve service
+# Frontend serve (file statici React)
 sudo tee /etc/systemd/system/dryer-frontend.service > /dev/null <<EOF
 [Unit]
-Description=Dryer Frontend (React static build with serve)
+Description=Dryer Frontend (React static build)
+Documentation=https://github.com/gingeradditive/D1-Control
 After=network.target
 
 [Service]
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR/frontend
-ExecStart=$SERVE_PATH -s dist -l 3000
-Restart=always
+ExecStart=$SERVE_PATH -s dist -l 3000 --no-clipboard
+ExecStop=/bin/kill -SIGTERM \$MAINPID
+
+# Riavvio automatico: solo su crash
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+# Shutdown pulito
+TimeoutStartSec=30
+TimeoutStopSec=10
+KillSignal=SIGTERM
+KillMode=mixed
+
+# Log su journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dryer-frontend
+
+# Limiti risorse per RPi
+LimitNOFILE=4096
+MemoryMax=100M
+MemorySwapMax=50M
+Nice=5
+
+# Hardening minimale
+NoNewPrivileges=yes
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-echo "🔁 Abilito i servizi all'avvio..."
-sudo systemctl daemon-reexec
+log "Ricarico systemd e abilito servizi..."
 sudo systemctl daemon-reload
 sudo systemctl enable dryer-backend.service
 sudo systemctl enable dryer-frontend.service
 
-echo "📂 Creo cartella per i log dell'applicazione..."
-mkdir -p "$PROJECT_DIR/logs"
+# ─── pigpiod ──────────────────────────────────────────────────────────────────
 
-echo "🛜 Aggiungo permessi per gestire le reti"
+section "PIGPIOD"
+sudo systemctl enable pigpiod.service
+sudo systemctl start pigpiod.service
+
+# ─── Permessi rete (NetworkManager / polkit) ──────────────────────────────────
+
+section "PERMESSI RETE"
 sudo usermod -aG netdev "$USERNAME"
 
-POLKIT_FILE="/etc/polkit-1/localauthority/50-local.d/10-nmcli.pkla"
-sudo tee "$POLKIT_FILE" > /dev/null <<EOF
+sudo tee /etc/polkit-1/localauthority/50-local.d/10-nmcli.pkla > /dev/null <<EOF
 [Allow NetworkManager all permissions for user]
 Identity=unix-user:$USERNAME
 Action=org.freedesktop.NetworkManager.*
@@ -167,88 +307,97 @@ ResultInactive=yes
 ResultActive=yes
 EOF
 
-echo "File $POLKIT_FILE creato con successo."
+# ─── Hardware: SPI e I2C ──────────────────────────────────────────────────────
 
-echo "🔌 Abilito interfacce hardware (SPI, I2C)"
-sudo sed -i 's/^#dtparam=spi=on/dtparam=spi=on/' /boot/config.txt || true
-grep -q '^dtparam=spi=on' /boot/config.txt || echo 'dtparam=spi=on' | sudo tee -a /boot/config.txt
-sudo sed -i 's/^#dtparam=i2c_arm=on/dtparam=i2c_arm=on/' /boot/config.txt || true
-grep -q '^dtparam=i2c_arm=on' /boot/config.txt || echo 'dtparam=i2c_arm=on' | sudo tee -a /boot/config.txt
+section "HARDWARE SPI/I2C"
+for PARAM in "dtparam=spi=on" "dtparam=i2c_arm=on"; do
+    KEY="${PARAM%%=*}=${PARAM##*=on}"   # dtparam=spi / dtparam=i2c_arm
+    sudo sed -i "s/^#${PARAM}/${PARAM}/" "$BOOT_CONFIG" || true
+    grep -q "^${PARAM}" "$BOOT_CONFIG" || echo "$PARAM" | sudo tee -a "$BOOT_CONFIG"
+done
 
-echo "spi-dev" | sudo tee -a /etc/modules || true
-echo "i2c-dev" | sudo tee -a /etc/modules || true
+for MOD in spi-dev i2c-dev; do
+    grep -q "^$MOD" /etc/modules || echo "$MOD" | sudo tee -a /etc/modules
+done
 
-echo "🔧 Configuro permessi sudo per reboot senza password..."
+# ─── Sudo reboot senza password ───────────────────────────────────────────────
+
+section "SUDO REBOOT"
 REBOOT_PATH=$(which reboot)
-SUDOERS_FILE="/etc/sudoers.d/reboot_without_password"
+SUDOERS_FILE=/etc/sudoers.d/dryer-reboot
 sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
 $USERNAME ALL=NOPASSWD: $REBOOT_PATH
 EOF
 sudo chmod 440 "$SUDOERS_FILE"
+sudo visudo -c -f "$SUDOERS_FILE" || { err "sudoers non valido, rimuovo"; sudo rm "$SUDOERS_FILE"; exit 1; }
 
-echo "🧩 Configuro autostart di Openbox (kiosk)..."
+# ─── Openbox — kiosk Chromium ─────────────────────────────────────────────────
+
+section "KIOSK OPENBOX"
 mkdir -p /home/$USERNAME/.config/openbox
-cat > /home/$USERNAME/.config/openbox/autostart <<EOF
-xset s off
-xset -dpms
-xset s noblank
-unclutter -idle 0 &
+tee /home/$USERNAME/.config/openbox/autostart > /dev/null <<EOF
+# Disabilita screensaver e risparmio energetico display
 xset s off
 xset -dpms
 xset s noblank
 unclutter -idle 0 &
 
-chromium-browser \
---noerrdialogs \
---disable-infobars \
---kiosk \
---disable-gpu \
---disable-software-rasterizer \
---disable-dev-shm-usage \
---no-sandbox \
---process-per-site \
---disk-cache-size=1 \
---media-cache-size=1 \
-http://localhost/?kiosk=true &
-
+# Avvia Chromium in modalità kiosk
+chromium-browser \\
+  --noerrdialogs \\
+  --disable-infobars \\
+  --kiosk \\
+  --disable-gpu \\
+  --disable-software-rasterizer \\
+  --disable-dev-shm-usage \\
+  --no-sandbox \\
+  --process-per-site \\
+  --disk-cache-size=1 \\
+  --media-cache-size=1 \\
+  http://localhost/?kiosk=true &
 EOF
+chmod +x /home/$USERNAME/.config/openbox/autostart
 chown -R $USERNAME:$USERNAME /home/$USERNAME/.config
 
-# 👇 aggiunto: garantisce che autostart sia eseguibile
-sudo chmod +x /home/$USERNAME/.config/openbox/autostart
+# ─── Nginx reverse proxy ──────────────────────────────────────────────────────
 
-echo "🔌 Installo e abilito pigpio daemon..."
-sudo apt-get install -y pigpio
-sudo systemctl enable pigpiod.service
-sudo systemctl start pigpiod.service
+section "NGINX"
+NGINX_CONF=/etc/nginx/sites-available/dryer
 
-echo "🌐 Installo Nginx..."
-sudo apt-get install -y nginx
-
-echo "🛠️ Configuro Nginx come reverse proxy..."
-
-NGINX_CONF="/etc/nginx/sites-available/dryer"
-
-sudo tee $NGINX_CONF > /dev/null <<EOF
+sudo tee "$NGINX_CONF" > /dev/null <<EOF
 server {
-    listen 80;
+    listen 80 default_server;
     server_name _;
 
+    # Frontend React (file statici)
     location / {
-        proxy_pass http://localhost:3000;
-    }
-
-    location /api/ {
-        proxy_pass http://localhost:8000/api/;
-        proxy_read_timeout 300;
-        proxy_connect_timeout 300;
-    }
-
-    location /ws/ {
-        proxy_pass http://localhost:8000/ws/;
+        proxy_pass         http://localhost:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header   Host \$host;
+        proxy_set_header   X-Real-IP \$remote_addr;
+        proxy_read_timeout 30;
+    }
+
+    # API Backend
+    location /api/ {
+        proxy_pass            http://localhost:8000/api/;
+        proxy_http_version    1.1;
+        proxy_set_header      Host \$host;
+        proxy_set_header      X-Real-IP \$remote_addr;
+        proxy_read_timeout    300;
+        proxy_connect_timeout 10;
+        proxy_send_timeout    300;
+        proxy_buffering       off;
+    }
+
+    # WebSocket
+    location /ws/ {
+        proxy_pass          http://localhost:8000/ws/;
+        proxy_http_version  1.1;
+        proxy_set_header    Upgrade \$http_upgrade;
+        proxy_set_header    Connection "upgrade";
+        proxy_set_header    Host \$host;
+        proxy_read_timeout  3600;
     }
 
     gzip on;
@@ -257,18 +406,36 @@ server {
 }
 EOF
 
-sudo ln -sf $NGINX_CONF /etc/nginx/sites-enabled/dryer
+sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/dryer
 sudo rm -f /etc/nginx/sites-enabled/default
-
-echo "🔁 Riavvio Nginx..."
-sudo systemctl restart nginx
+sudo nginx -t
 sudo systemctl enable nginx
+sudo systemctl restart nginx
 
-echo "🖥️ Abilito LightDM & sessione grafica..."
+# ─── LightDM & grafica ────────────────────────────────────────────────────────
+
+section "LIGHTDM"
 sudo systemctl enable lightdm
 sudo systemctl set-default graphical.target
 
-echo "🔁 Riavvio LightDM..."
-sudo systemctl restart lightdm
+# ─── Avvio servizi ────────────────────────────────────────────────────────────
 
-echo "✅ Installazione completata — sistema kiosk pronto al riavvio!"
+section "AVVIO SERVIZI"
+log "Avvio dryer-backend..."
+sudo systemctl restart dryer-backend.service
+log "Avvio dryer-frontend..."
+sudo systemctl restart dryer-frontend.service
+
+sleep 3
+log "Stato servizi:"
+sudo systemctl is-active dryer-backend.service  && log "  dryer-backend:  ATTIVO" || warn "  dryer-backend:  non attivo"
+sudo systemctl is-active dryer-frontend.service && log "  dryer-frontend: ATTIVO" || warn "  dryer-frontend: non attivo"
+sudo systemctl is-active pigpiod.service        && log "  pigpiod:        ATTIVO" || warn "  pigpiod:        non attivo"
+sudo systemctl is-active nginx.service          && log "  nginx:          ATTIVO" || warn "  nginx:          non attivo"
+
+# ─── Fine ─────────────────────────────────────────────────────────────────────
+
+section "INSTALLAZIONE COMPLETATA"
+log "Sistema kiosk pronto."
+log "Per i log: journalctl -u dryer-backend -f  |  journalctl -u dryer-frontend -f"
+warn "Riavvio consigliato per applicare le modifiche al boot config: sudo reboot"

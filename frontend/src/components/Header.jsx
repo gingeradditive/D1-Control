@@ -9,26 +9,17 @@ import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
-import TimelineIcon from '@mui/icons-material/Timeline';
+import HistoryIcon from '@mui/icons-material/History';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
-// import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
-
 import WifiDialog from './WifiDialog';
-import AlarmDialog from './AlarmDialog';
 import ChartDialog from './ChartDialog';
 import SettingsDialog from './SettingsDialog';
 import StatsDialog from './StatsDialog';
 
 import { api } from '../api'; // Assicurati che l'import sia corretto
 
-const mockChartData = Array.from({ length: 10 }, (_, i) => ({
-  time: `T${i}`,
-  temperature: 20 + i,
-}));
-
 export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange }) {
   const [openModal, setOpenModal] = useState(null);
-  const [range, setRange] = useState('1h');
   const [network, setNetwork] = useState({
     "connected": false,
     "ssid": "",
@@ -97,10 +88,9 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
           <IconButton onClick={handleOpen('wifi')}>
             {getWifiIcon(network)}
           </IconButton>
-          {/* <IconButton onClick={handleOpen('alarm')}><AccessAlarmIcon /></IconButton> */}
         </Box>
         <Box display="flex" alignItems="center">
-          <IconButton onClick={handleOpen('chart')}><TimelineIcon /></IconButton>
+          <IconButton onClick={handleOpen('chart')}><HistoryIcon /></IconButton>
           <IconButton onClick={handleOpen('stats')}><EqualizerIcon /></IconButton>
           <IconButton onClick={handleOpen('settings')}><SettingsIcon /></IconButton>
         </Box>
@@ -114,14 +104,9 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
         }}
       />
 
-      <AlarmDialog open={openModal === 'alarm'} onClose={handleClose} />
-
       <ChartDialog
         open={openModal === 'chart'}
         onClose={handleClose}
-        range={range}
-        setRange={setRange}
-        chartData={mockChartData}
       />
 
       <SettingsDialog

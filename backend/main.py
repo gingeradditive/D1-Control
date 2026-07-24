@@ -1,4 +1,5 @@
 import uvicorn
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from threading import Thread
@@ -8,14 +9,44 @@ from backend.api.routes import dryer, network, update, config, stats, presets
 from backend.core.background import background_loop
 from backend.core.state import controllers
 
-app = FastAPI(title="Dryer Control API")
+# ---------------------------
+# ⚙️ BACKGROUND LOOP (dryer)
+# ---------------------------
+_running = True
+_thread = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _thread, _running
+    print("[Startup] Avvio ciclo di background del dryer...")
+    _thread = Thread(target=background_loop, args=(controllers, lambda: _running))
+    _thread.daemon = True
+    _thread.start()
+    yield
+    print("[Shutdown] Arresto in corso...")
+    _running = False
+    if _thread:
+        _thread.join(timeout=3)
+    try:
+        controllers["dryer"].shutdown()
+    except Exception as e:
+        print(f"[Shutdown] Errore in chiusura dryer: {e}")
+
+app = FastAPI(title="Dryer Control API", lifespan=lifespan)
 
 # ---------------------------
 # 🔒 CORS CONFIG
 # ---------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,33 +61,6 @@ app.include_router(update.router, prefix="/api/update", tags=["Update"])
 app.include_router(config.router, prefix="/api/config", tags=["Config"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Stats"])
 app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
-
-# ---------------------------
-# ⚙️ BACKGROUND LOOP (dryer)
-# ---------------------------
-_running = True
-_thread = None
-
-@app.on_event("startup")
-def startup_event():
-    global _thread
-    print("[Startup] Avvio ciclo di background del dryer...")
-    _thread = Thread(target=background_loop, args=(controllers, lambda: _running))
-    _thread.daemon = True
-    _thread.start()
-
-@app.on_event("shutdown")
-def shutdown_event():
-    global _running, _thread
-    print("[Shutdown] Arresto in corso...")
-    _running = False
-    if _thread:
-        _thread.join(timeout=3)
-    # ferma il dryer e pulisci GPIO
-    try:
-        controllers["dryer"].shutdown()
-    except Exception as e:
-        print(f"[Shutdown] Errore in chiusura dryer: {e}")
 
 # ---------------------------
 # 🚀 ENTRYPOINT (Uvicorn)

@@ -100,6 +100,7 @@ export default function VirtualKeyboard() {
   };
 
   const addCharacter = (char) => {
+    if (char === '.' && inputType === 'numeric' && normalizeValue(value).includes('.')) return;
     const nextValue = `${normalizeValue(value)}${char}`;
     setInputValue(nextValue);
     if (isShift && inputType === 'text') {

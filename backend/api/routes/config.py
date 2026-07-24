@@ -11,41 +11,43 @@ def get_all_config():
 
 @router.post("/set")
 def set_config(key: str = Form(...), value: str = Form(...)):
-    config.set(key, value)
+    try:
+        parsed = int(value)
+    except ValueError:
+        try:
+            parsed = float(value)
+        except ValueError:
+            parsed = value
+    config.set(key, parsed)
     return {"status": "Success", "message": "Configuration updated"}
 
 @router.get("/reload")
 def reload_config():
-    from backend.core.state import controllers
+    from backend.core.state import controllers, PROJECT_ROOT
 
-    config = controllers["config"]
+    cfg = controllers["config"]
 
-    # Properly cleanup the old dryer controller before creating a new one
     old_dryer = controllers.get("dryer")
     if old_dryer:
         old_dryer.shutdown()
-    
-    controllers["dryer"] = controllers["dryer"].__class__(config)
+
+    controllers["dryer"] = controllers["dryer"].__class__(cfg)
     controllers["network"] = controllers["network"].__class__()
-    controllers["update"] = controllers["update"].__class__(".")
+    controllers["update"] = controllers["update"].__class__(str(PROJECT_ROOT))
     return {"status": "Success", "message": "Controllers reloaded"}
 
-@router.get("/{key}")
-def get(key: str):
-    return config.get(key, None)
+@router.get("/timezone")
+def get_timezone():
+    try:
+        return {"timezone": system.get_timezone()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/timezone")
 def set_timezone(timezone: str = Form(...)):
     try:
         system.set_timezone(timezone)
         return {"status": "Success", "message": f"Timezone set to {system.get_timezone()}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/timezone")
-def get_timezone():
-    try:
-        return {"timezone": system.get_timezone()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -56,3 +58,7 @@ def factory_reset():
         return {"status": "Success", "message": "Configuration reset to factory defaults"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Factory reset failed: {e}")
+
+@router.get("/{key}")
+def get(key: str):
+    return config.get(key, None)

@@ -1,5 +1,6 @@
 import time
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import JSONResponse
 from backend.core.state import controllers
 
 router = APIRouter()
@@ -10,7 +11,7 @@ def get_status():
     ts, temp, heater, fan, valve = dryer.get_status_data()
     elapsed = 0
     if dryer.dryer_status and dryer.session_start_time is not None:
-        elapsed = int(time.time() - dryer.session_start_time)
+        elapsed = int(time.monotonic() - dryer.session_start_time)
     return {
         "setpoint": dryer.set_temp,
         "current_temp": round(temp),
@@ -19,12 +20,19 @@ def get_status():
         "status": dryer.dryer_status,
         "valve": valve,
         "errors": dryer.errors,
+        "sensor_fault": dryer.sensor_fault,
         "drying_elapsed_seconds": elapsed,
     }
 
 @router.post("/status/{status}")
 def set_status(status: bool):
     dryer = controllers["dryer"]
+    if status and dryer.sensor_fault:
+        fault_detail = dryer.errors.get("sensor_fault", "Sensor fault detected")
+        return JSONResponse(
+            status_code=400,
+            content={"error": "sensor_fault", "detail": fault_detail},
+        )
     dryer.start() if status else dryer.stop()
     return {"status": "running" if status else "stopped"}
 
@@ -48,6 +56,8 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
 
 @router.post("/setpoint/{value}")
 def set_setpoint(value: float):
+    if not (0 <= value <= 90):
+        raise HTTPException(status_code=422, detail="Setpoint out of range [0, 90]°C")
     dryer = controllers["dryer"]
     dryer.update_setpoint(value)
     return {"setpoint": dryer.set_temp}
@@ -60,12 +70,14 @@ def reset_filter_hours():
 
 @router.post("/filter/set/{hours}")
 def set_filter_hours(hours: float):
+    if hours < 0 or hours > 100000:
+        raise HTTPException(status_code=422, detail="Filter hours out of range [0, 100000]")
     dryer = controllers["dryer"]
     dryer._accumulate_session_hours()
     dryer.filter_hours = hours
     dryer.config.set("filter_operating_hours", round(hours, 4))
     if dryer.dryer_status:
-        dryer.session_start_time = __import__("time").time()
+        dryer.session_start_time = __import__("time").monotonic()
     return {"filter_hours": hours}
 
 @router.get("/purge-time")
