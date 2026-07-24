@@ -26,6 +26,35 @@ else
     BOOT_CONFIG=/boot/config.txt
 fi
 
+# ─── Rilevamento ambiente (sistema reale vs build immagine) ──────────────────
+# Se lo script gira nel chroot di build (CustoPiZer/pi-gen) NON dobbiamo avviare
+# servizi o attivare la swap: i processi resterebbero aperti sull'immagine e ne
+# impedirebbero lo smontaggio finale ("target is busy"). Config e "enable" sono
+# comunque applicati, quindi tutto parte al primo boot reale del dispositivo.
+IS_BUILD=0
+if [ -e /usr/sbin/policy-rc.d ]; then
+    # Marker installato da CustoPiZer/pi-gen per tutta la durata della build.
+    IS_BUILD=1
+else
+    # Fallback: in un chroot la root del processo init differisce dalla nostra.
+    _init_root="$(sudo stat -c %d:%i /proc/1/root/. 2>/dev/null || true)"
+    if [ -n "$_init_root" ] && [ "$(stat -c %d:%i / 2>/dev/null || true)" != "$_init_root" ]; then
+        IS_BUILD=1
+    fi
+fi
+if [ "$IS_BUILD" = 1 ]; then
+    warn "Ambiente build immagine rilevato: avvio servizi e swap rimandati al primo boot"
+fi
+
+# Avvia/riavvia un servizio solo su sistema reale (no-op durante la build).
+service_runtime() {
+    if [ "$IS_BUILD" = 1 ]; then
+        warn "systemctl $* saltato (build immagine)"
+        return 0
+    fi
+    sudo systemctl "$@"
+}
+
 export DEBIAN_FRONTEND=noninteractive
 
 section "AVVIO INSTALLAZIONE SISTEMA KIOSK"
@@ -63,9 +92,11 @@ if [ ! -f "$SWAPFILE" ]; then
     sudo chmod 600 "$SWAPFILE.new"
     sudo mkswap "$SWAPFILE.new"
     sudo mv "$SWAPFILE.new" "$SWAPFILE"
-    # In build swapon non è possibile/necessario: la voce in fstab attiva la
-    # swap al boot reale del dispositivo.
-    sudo swapon "$SWAPFILE" || warn "swapon saltato (ambiente build/chroot)"
+    # In build non attiviamo la swap (verrebbe tenuta aperta sull'immagine e ne
+    # bloccherebbe lo smontaggio): la voce in fstab la attiva al boot reale.
+    if [ "$IS_BUILD" = 0 ]; then
+        sudo swapon "$SWAPFILE" || warn "swapon fallito (swap attiva dal prossimo riavvio)"
+    fi
     grep -q "$SWAPFILE" /etc/fstab || echo "$SWAPFILE none swap sw 0 0" | sudo tee -a /etc/fstab
     log "Swap da 1GB configurata"
 else
@@ -194,7 +225,7 @@ SystemMaxUse=100M
 SystemKeepFree=200M
 MaxRetentionSec=7day
 EOF
-sudo systemctl restart systemd-journald || true
+service_runtime restart systemd-journald || true
 
 # ─── Servizi systemd ──────────────────────────────────────────────────────────
 
@@ -299,7 +330,7 @@ sudo systemctl enable dryer-frontend.service
 
 section "PIGPIOD"
 sudo systemctl enable pigpiod.service
-sudo systemctl start pigpiod.service
+service_runtime start pigpiod.service
 
 # ─── Permessi rete (NetworkManager / polkit) ──────────────────────────────────
 
@@ -418,7 +449,7 @@ sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/dryer
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl enable nginx
-sudo systemctl restart nginx
+service_runtime restart nginx
 
 # ─── LightDM & grafica ────────────────────────────────────────────────────────
 
@@ -430,16 +461,18 @@ sudo systemctl set-default graphical.target
 
 section "AVVIO SERVIZI"
 log "Avvio dryer-backend..."
-sudo systemctl restart dryer-backend.service
+service_runtime restart dryer-backend.service
 log "Avvio dryer-frontend..."
-sudo systemctl restart dryer-frontend.service
+service_runtime restart dryer-frontend.service
 
-sleep 3
-log "Stato servizi:"
-sudo systemctl is-active dryer-backend.service  && log "  dryer-backend:  ATTIVO" || warn "  dryer-backend:  non attivo"
-sudo systemctl is-active dryer-frontend.service && log "  dryer-frontend: ATTIVO" || warn "  dryer-frontend: non attivo"
-sudo systemctl is-active pigpiod.service        && log "  pigpiod:        ATTIVO" || warn "  pigpiod:        non attivo"
-sudo systemctl is-active nginx.service          && log "  nginx:          ATTIVO" || warn "  nginx:          non attivo"
+if [ "$IS_BUILD" = 0 ]; then
+    sleep 3
+    log "Stato servizi:"
+    sudo systemctl is-active dryer-backend.service  && log "  dryer-backend:  ATTIVO" || warn "  dryer-backend:  non attivo"
+    sudo systemctl is-active dryer-frontend.service && log "  dryer-frontend: ATTIVO" || warn "  dryer-frontend: non attivo"
+    sudo systemctl is-active pigpiod.service        && log "  pigpiod:        ATTIVO" || warn "  pigpiod:        non attivo"
+    sudo systemctl is-active nginx.service          && log "  nginx:          ATTIVO" || warn "  nginx:          non attivo"
+fi
 
 # ─── Fine ─────────────────────────────────────────────────────────────────────
 
