@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **`checkG1OS` senza `catch`** ([App.jsx:40-45](frontend/src/App.jsx#L40-L45)) → unhandled
-      rejection se il backend non risponde.
 - [ ] **`Grid item xs={4}`** ([SettingsDialog.jsx:249](frontend/src/components/SettingsDialog.jsx#L249)):
       la prop `item` è stata rimossa nel Grid di MUI v7.
 - [ ] **Nessun `timeout` sul client axios** ([api.jsx](frontend/src/api.jsx)): una richiesta
