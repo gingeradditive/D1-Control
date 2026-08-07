@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
@@ -12,16 +12,23 @@ import EqualizerIcon from '@mui/icons-material/Equalizer';
 import HistoryIcon from '@mui/icons-material/History';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import ArticleIcon from '@mui/icons-material/Article';
-import WifiDialog from './WifiDialog';
-import ChartDialog from './ChartDialog';
-import SettingsDialog from './SettingsDialog';
-import StatsDialog from './StatsDialog';
-import LogsDialog from './LogsDialog';
+
+// Caricati solo al primo utilizzo (React.lazy) invece di stare tutti nel bundle
+// iniziale: nessuno di questi dialog serve prima che l'utente li apra.
+const WifiDialog = lazy(() => import('./WifiDialog'));
+const ChartDialog = lazy(() => import('./ChartDialog'));
+const SettingsDialog = lazy(() => import('./SettingsDialog'));
+const StatsDialog = lazy(() => import('./StatsDialog'));
+const LogsDialog = lazy(() => import('./LogsDialog'));
 
 import { api } from '../api'; // Assicurati che l'import sia corretto
 
 export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange }) {
   const [openModal, setOpenModal] = useState(null);
+  // Una volta aperto, un dialog resta montato (stesso comportamento di prima)
+  // cosi' non perde lo stato interno quando viene richiuso e riaperto; prima
+  // di essere aperto la prima volta il suo chunk non viene nemmeno scaricato.
+  const [openedModals, setOpenedModals] = useState(() => new Set());
   const [network, setNetwork] = useState({
     "connected": false,
     "ssid": "",
@@ -29,7 +36,10 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
     "ip": "--.--.--.--"
   });
 
-  const handleOpen = (modal) => () => setOpenModal(modal);
+  const handleOpen = (modal) => () => {
+    setOpenModal(modal);
+    setOpenedModals(prev => (prev.has(modal) ? prev : new Set(prev).add(modal)));
+  };
   const handleClose = () => setOpenModal(null);
 
   const checkNetworkStatus = useCallback(() => {
@@ -101,38 +111,50 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
         </Box>
       </Box>
 
-      <WifiDialog
-        open={openModal === 'wifi'}
-        onClose={() => {
-          handleClose();
-          checkNetworkStatus();
-        }}
-      />
+      <Suspense fallback={null}>
+        {openedModals.has('wifi') && (
+          <WifiDialog
+            open={openModal === 'wifi'}
+            onClose={() => {
+              handleClose();
+              checkNetworkStatus();
+            }}
+          />
+        )}
 
-      <ChartDialog
-        open={openModal === 'chart'}
-        onClose={handleClose}
-      />
+        {openedModals.has('chart') && (
+          <ChartDialog
+            open={openModal === 'chart'}
+            onClose={handleClose}
+          />
+        )}
 
-      <SettingsDialog
-        open={openModal === 'settings'}
-        onClose={handleClose}
-        keysToShow={keysToShow}
-        titlesMap={titlesMap}
-        onPresetSaved={onPresetSaved}
-        pinnedPresetIds={pinnedPresetIds}
-        onPinnedChange={onPinnedChange}
-      />
+        {openedModals.has('settings') && (
+          <SettingsDialog
+            open={openModal === 'settings'}
+            onClose={handleClose}
+            keysToShow={keysToShow}
+            titlesMap={titlesMap}
+            onPresetSaved={onPresetSaved}
+            pinnedPresetIds={pinnedPresetIds}
+            onPinnedChange={onPinnedChange}
+          />
+        )}
 
-      <StatsDialog
-        open={openModal === 'stats'}
-        onClose={handleClose}
-      />
+        {openedModals.has('stats') && (
+          <StatsDialog
+            open={openModal === 'stats'}
+            onClose={handleClose}
+          />
+        )}
 
-      <LogsDialog
-        open={openModal === 'logs'}
-        onClose={handleClose}
-      />
+        {openedModals.has('logs') && (
+          <LogsDialog
+            open={openModal === 'logs'}
+            onClose={handleClose}
+          />
+        )}
+      </Suspense>
     </>
   );
 }

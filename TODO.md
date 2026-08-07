@@ -14,8 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **Nessun code splitting**: tutti i dialog (Settings, Stats, Presets, Chart, Wifi) sono nel
-      bundle iniziale. `React.lazy` su ciascuno.
 - [ ] **Chromium avviato con `--disable-gpu`** ([install.sh:389](scripts/install.sh#L389)):
       se è un workaround per un bug specifico va documentato, altrimenti costa fluidità alle
       animazioni del display.
