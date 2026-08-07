@@ -84,8 +84,8 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
       setError('Please enter a valid name and temperature.');
       return;
     }
-    if (temp < 0 || temp > 70) {
-      setError('Temperature must be between 0 and 70°C.');
+    if (temp < 0 || temp > 90) {
+      setError('Temperature must be between 0 and 90°C.');
       return;
     }
 
@@ -180,7 +180,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                       onChange={e => !isKiosk && setEditTemp(e.target.value)}
                       size="small"
                       sx={{ width: 100 }}
-                      InputProps={{ readOnly: isKiosk, inputProps: { min: 0, max: 70, step: 5, inputMode: isKiosk ? 'none' : 'decimal' } }}
+                      InputProps={{ readOnly: isKiosk, inputProps: { min: 0, max: 90, step: 5, inputMode: isKiosk ? 'none' : 'decimal' } }}
                       onPointerDown={isKiosk ? (e) => { e.preventDefault(); openKeyboard(editTemp, 'numeric', val => setEditTemp(val)); } : undefined}
                     />
                     <IconButton color="primary" onClick={handleSaveEdit} size="small">
@@ -275,7 +275,7 @@ export default function PresetsDialog({ open, onClose, onPresetSaved, pinnedPres
                   onChange={e => !isKiosk && setEditTemp(e.target.value)}
                   size="small"
                   sx={{ width: 100 }}
-                  InputProps={{ readOnly: isKiosk, inputProps: { min: 0, max: 70, step: 5, inputMode: isKiosk ? 'none' : 'decimal' } }}
+                  InputProps={{ readOnly: isKiosk, inputProps: { min: 0, max: 90, step: 5, inputMode: isKiosk ? 'none' : 'decimal' } }}
                   onPointerDown={isKiosk ? (e) => { e.preventDefault(); openKeyboard(editTemp, 'numeric', val => setEditTemp(val)); } : undefined}
                 />
                 <IconButton color="primary" onClick={handleSaveEdit} size="small">

@@ -16,11 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **Limiti di temperatura incoerenti su tre livelli**: backend setpoint `0–90`
-      ([dryer.py:58](backend/api/routes/dryer.py#L58)), preset `0–70`
-      ([presets.py](backend/api/routes/presets.py)), UI clamp `0–70`
-      ([StatusManager.jsx:227](frontend/src/components/StatusManager.jsx#L227)).
-      Serve una costante unica.
 - [ ] **`purge_time` / `cycle_time`: unità ambigue.** Il controller li tratta come **minuti**
       (`* 60`, [controller.py:373](backend/dryer/controller.py#L373)), la UI li etichetta
       "(min)", ma le route li chiamano `seconds`

@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from backend.core.state import controllers
+from backend.core.constants import SETPOINT_TEMP_MIN, SETPOINT_TEMP_MAX
 
 router = APIRouter()
 
@@ -29,8 +30,8 @@ HARDCODED_PRESETS = [
 ]
 
 
-TEMP_MIN = 0
-TEMP_MAX = 70
+TEMP_MIN = SETPOINT_TEMP_MIN
+TEMP_MAX = SETPOINT_TEMP_MAX
 
 
 class PresetCreate(BaseModel):

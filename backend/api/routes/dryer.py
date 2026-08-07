@@ -2,6 +2,7 @@ import time
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from backend.core.state import controllers
+from backend.core.constants import SETPOINT_TEMP_MIN, SETPOINT_TEMP_MAX
 
 router = APIRouter()
 
@@ -72,8 +73,11 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
 
 @router.post("/setpoint/{value}")
 def set_setpoint(value: float):
-    if not (0 <= value <= 90):
-        raise HTTPException(status_code=422, detail="Setpoint out of range [0, 90]°C")
+    if not (SETPOINT_TEMP_MIN <= value <= SETPOINT_TEMP_MAX):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Setpoint out of range [{SETPOINT_TEMP_MIN}, {SETPOINT_TEMP_MAX}]°C",
+        )
     dryer = controllers["dryer"]
     dryer.update_setpoint(value)
     return {"setpoint": dryer.set_temp}

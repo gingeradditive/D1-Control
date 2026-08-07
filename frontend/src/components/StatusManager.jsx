@@ -224,7 +224,7 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
   }, [inactivityTimeout, isKiosk]);
 
   const handleIncrease = () => {
-    let newSet = Math.min(status.setpoint + 5, 70);
+    let newSet = Math.min(status.setpoint + 5, 90);
     api.setPoint(newSet);
     setActivePresetId(null);
     api.getStatus()
