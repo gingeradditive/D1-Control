@@ -31,8 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **`/api/config/reload` è una GET con effetti distruttivi** (spegne il dryer e ricrea i
-      controller). Deve essere una POST.
 - [ ] **Il factory reset non ricarica il controller**: `config.reset()`
       ([config.py:55](backend/api/routes/config.py#L55)) riscrive il file ma setpoint, tempi
       e durate in memoria restano quelli vecchi fino al riavvio del servizio.

@@ -34,7 +34,7 @@ export const api = {
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     ),
   applyConfigurations: () => apiClient.post("/api/config/apply"),
-  reloadConfigurations: () => apiClient.get("/api/config/reload"),
+  reloadConfigurations: () => apiClient.post("/api/config/reload"),
   getConfiguration: (key) => apiClient.get(`/api/config/${key}`),
 
   /** 🔄 Factory Reset Config */

@@ -29,7 +29,7 @@ def apply_config():
         raise HTTPException(status_code=500, detail=f"Failed to apply configuration: {e}")
     return {"status": "Success", "message": "Configuration applied"}
 
-@router.get("/reload")
+@router.post("/reload")
 def reload_config():
     from backend.core.state import controllers, PROJECT_ROOT
 
