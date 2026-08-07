@@ -14,10 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Nessun test automatico.** Il bug di oggi sarebbe stato preso da un singolo test che fa
-      girare `background_loop` per 11 secondi e verifica che la history cresca. Partire da lì:
-      `read_sensor` (validi/non validi/fault), `update_heater` (isteresi, valvola aperta),
-      `_accumulate_session_hours`, `FileConfig` concorrente.
 - [ ] **Nessuna CI** che almeno importi il backend e builda il frontend su PR.
 - [ ] **Stato "acceso" non persistente**: dopo un riavvio imprevisto il dryer resta spento senza
       alcuna segnalazione all'operatore che il ciclo è stato interrotto.
