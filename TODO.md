@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **`_cpu_usage()` fa `time.sleep(0.1)` dentro una route sincrona**
-      ([stats.py:22-35](backend/api/routes/stats.py#L22-L35)), bloccando un worker del
-      threadpool ad ogni richiesta di statistiche.
 - [ ] **Re-render dell'intero albero a 1 Hz**: `setStatus(res.data)` sostituisce sempre
       l'oggetto, anche quando nulla è cambiato. Su un Pi conta. Confrontare e aggiornare solo
       sui campi realmente variati.

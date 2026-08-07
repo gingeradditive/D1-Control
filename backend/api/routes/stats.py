@@ -6,6 +6,7 @@ from backend.core.state import controllers
 
 router = APIRouter()
 _boot_time = time.time()
+_last_cpu_sample = None
 
 
 def _read_file(path, default=""):
@@ -17,16 +18,27 @@ def _read_file(path, default=""):
 
 
 def _cpu_usage():
+    """Percentuale di utilizzo CPU come delta rispetto alla chiamata precedente.
+
+    Prima leggeva /proc/stat due volte con un time.sleep(0.1) in mezzo,
+    bloccando un worker del threadpool per 100ms ad ogni richiesta di
+    statistiche. Tenendo in memoria l'ultimo campione il calcolo diventa una
+    singola lettura non bloccante (nessun dato sulla primissima chiamata).
+    """
+    global _last_cpu_sample
     try:
         with open("/proc/stat") as f:
-            p1 = f.readline().split()
-        idle1, total1 = int(p1[4]), sum(int(x) for x in p1[1:])
-        time.sleep(0.1)
-        with open("/proc/stat") as f:
-            p2 = f.readline().split()
-        idle2, total2 = int(p2[4]), sum(int(x) for x in p2[1:])
-        dt = total2 - total1
-        return round((1.0 - (idle2 - idle1) / dt) * 100, 1) if dt else 0.0
+            parts = f.readline().split()
+        idle, total = int(parts[4]), sum(int(x) for x in parts[1:])
+
+        previous = _last_cpu_sample
+        _last_cpu_sample = (idle, total)
+        if previous is None:
+            return None
+
+        idle_prev, total_prev = previous
+        dt = total - total_prev
+        return round((1.0 - (idle - idle_prev) / dt) * 100, 1) if dt else 0.0
     except Exception:
         return None
 
