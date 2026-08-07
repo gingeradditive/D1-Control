@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **`timerSet={false} // TODO`** in [Footer.jsx](frontend/src/components/Footer.jsx) — spia
-      sempre spenta.
 
 ### Installazione / sistema
 

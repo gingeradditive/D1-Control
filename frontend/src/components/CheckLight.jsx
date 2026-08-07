@@ -5,7 +5,7 @@ import AlarmOffIcon from '@mui/icons-material/AlarmOff';
 import AlarmIcon from '@mui/icons-material/Alarm';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 
-export default function CheckLight({ heaterOn, fanOn, timerSet, valveOpen }) {
+export default function CheckLight({ heaterOn, fanOn, valveOpen }) {
   return (
     <Box display="flex" justifyContent="end" alignItems="center">
 
