@@ -380,13 +380,20 @@ for MOD in spi-dev i2c-dev; do
     grep -q "^$MOD" /etc/modules || echo "$MOD" | sudo tee -a /etc/modules
 done
 
-# ─── Sudo reboot senza password ───────────────────────────────────────────────
+# ─── Sudo senza password (reboot + scope di update) ───────────────────────────
 
 section "SUDO REBOOT"
 REBOOT_PATH=$(which reboot)
+SYSTEMD_RUN_PATH=$(which systemd-run || echo /usr/bin/systemd-run)
 SUDOERS_FILE=/etc/sudoers.d/dryer-reboot
+# La seconda regola serve a backend/update/system_control.py per eseguire
+# `pip install` e la build del frontend fuori dal cgroup del servizio, che ha
+# MemoryMax=400M e farebbe intervenire l'OOM killer. Il comando finale gira
+# comunque come $USERNAME grazie a runuser, quindi non concede privilegi extra.
+# Deve restare identica a _scope_prefix() in system_control.py.
 sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
 $USERNAME ALL=NOPASSWD: $REBOOT_PATH
+$USERNAME ALL=NOPASSWD: $SYSTEMD_RUN_PATH --scope --quiet --collect --unit=dryer-update -p MemoryMax=infinity -p MemorySwapMax=infinity runuser -u $USERNAME -- /bin/sh -c *
 EOF
 sudo chmod 440 "$SUDOERS_FILE"
 sudo visudo -c -f "$SUDOERS_FILE" || { err "sudoers non valido, rimuovo"; sudo rm "$SUDOERS_FILE"; exit 1; }
