@@ -9,11 +9,18 @@ def mark_directory_safe(project_path: Path):
     run_command(f"git config --global --add safe.directory {project_path}")
 
 
+# File runtime che devono sopravvivere a `git clean`: sono già in .gitignore, ma
+# qui sono esclusi esplicitamente cosi' l'aggiornamento resta sicuro anche se
+# qualcuno modifica .gitignore senza pensare a questo comando.
+_CLEAN_EXCLUDES = ["config.json", "presets.json", "logs/", "setpoint.txt"]
+
+
 def git_pull(project_path: Path) -> str:
     """Esegue git reset --hard e poi git pull per garantire un aggiornamento pulito"""
     mark_directory_safe(project_path)
     run_command("git reset --hard HEAD", cwd=project_path)
-    run_command("git clean -fd", cwd=project_path)
+    excludes = " ".join(f"-e {name}" for name in _CLEAN_EXCLUDES)
+    run_command(f"git clean -fd {excludes}", cwd=project_path)
     return run_command("git pull", cwd=project_path, env={"LANG": "C", "LC_ALL": "C"})
 
 

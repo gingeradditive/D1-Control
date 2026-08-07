@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`git clean -fd`** ([git_manager.py](backend/update/git_manager.py)) cancella qualsiasi
-      file non tracciato e non ignorato presente sul dispositivo. `config.json`, `presets.json`
-      e `logs/` sono in `.gitignore` quindi sopravvivono, ma il margine è sottile: aggiungere
-      `-e` espliciti o rimuovere il `clean`.
 - [ ] **`install_backend_dependencies` non quota il path**:
       `f"{venv_pip} install -r requirements.txt"` con `shell=True`
       ([dependencies.py](backend/update/dependencies.py)) si rompe se il progetto sta in una
