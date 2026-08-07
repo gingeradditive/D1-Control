@@ -31,14 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **Chiave/valore invertiti in `errors`.**
-      [controller.py:171](backend/dryer/controller.py#L171) scrive
-      `errors["sensor_fault"] = fault_desc`, mentre tutti gli altri sono
-      `errors[descrizione] = data_iso`
-      ([controller.py:139](backend/dryer/controller.py#L139)). La UI fa
-      `new Date(date).toLocaleString()`
-      ([StatusManager.jsx:49](frontend/src/components/StatusManager.jsx#L49)) → il toast del
-      guasto sensore mostra **"Invalid Date"**.
 - [ ] **`self.errors` cresce senza limite**: una chiave per ogni stringa di eccezione
       distinta, mai ripulita (salvo `sensor_fault`), e viene serializzata ad ogni
       `GET /status`, cioè **una volta al secondo**.

@@ -66,6 +66,9 @@ class DryerController:
 
         # sensor fault tracking
         self.sensor_fault = False
+        # descrizione del fault attivo: è anche la chiave usata in self.errors,
+        # serve per ripulirla quando il fault rientra
+        self.sensor_fault_desc = None
         self._sensor_bad_streak  = 0
         self._sensor_good_streak = 0
 
@@ -159,7 +162,9 @@ class DryerController:
             if self.sensor_fault:
                 if self._sensor_good_streak >= _FAULT_CLEAR_COUNT:
                     self.sensor_fault = False
-                    self.errors.pop("sensor_fault", None)
+                    if self.sensor_fault_desc is not None:
+                        self.errors.pop(self.sensor_fault_desc, None)
+                        self.sensor_fault_desc = None
                     print("[DryerController] Sensor fault cleared — readings back to normal.")
 
             self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
@@ -180,7 +185,9 @@ class DryerController:
 
         if not self.sensor_fault and self._sensor_bad_streak >= _FAULT_TRIP_COUNT:
             self.sensor_fault = True
-            self.errors["sensor_fault"] = fault_desc
+            self.sensor_fault_desc = fault_desc
+            # stessa convenzione degli altri errori: chiave = descrizione, valore = data ISO
+            self.errors[fault_desc] = now.isoformat()
             print(f"[DryerController] SENSOR FAULT: {fault_desc}", file=sys.stderr)
             if self.dryer_status:
                 print("[DryerController] Emergency stop triggered by sensor fault.", file=sys.stderr)

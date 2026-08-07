@@ -35,7 +35,7 @@ def set_status(status: bool):
         # start() è l'unica fonte di verità: può rifiutare l'avvio anche se il
         # fault è comparso tra la richiesta e questo istante.
         if not dryer.start():
-            fault_detail = dryer.errors.get("sensor_fault", "Sensor fault detected")
+            fault_detail = dryer.sensor_fault_desc or "Sensor fault detected"
             return JSONResponse(
                 status_code=409,
                 content={
