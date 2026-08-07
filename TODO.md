@@ -14,15 +14,8 @@ Legenda priorità:
 
 ## 🟠 Bug
 
-### Backend
-
-
 ### Frontend
 
-- [ ] **Race su +/- setpoint.**
-      [StatusManager.jsx:226-242](frontend/src/components/StatusManager.jsx#L226-L242):
-      `api.setPoint(newSet)` non è atteso e subito dopo parte `api.getStatus()` → può leggere
-      il valore vecchio e far "rimbalzare" indietro la UI.
 - [ ] **Mostra `0°` invece di `--` all'avvio.** `get_status_data()` ritorna `0.0` se la
       history è vuota ([controller.py:350-352](backend/dryer/controller.py#L350-L352)) e
       `currentTemp !== null` è vero per `0`

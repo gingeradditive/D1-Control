@@ -225,26 +225,26 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
 
   const handleIncrease = () => {
     let newSet = Math.min(status.setpoint + 5, 90);
-    api.setPoint(newSet);
     setActivePresetId(null);
-    api.getStatus()
+    api.setPoint(newSet)
+      .then(() => api.getStatus())
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
 
   const handleDecrease = () => {
     let newSet = Math.max(status.setpoint - 5, 0);
-    api.setPoint(newSet);
     setActivePresetId(null);
-    api.getStatus()
+    api.setPoint(newSet)
+      .then(() => api.getStatus())
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
 
   const handlePresetSelect = (preset) => {
-    api.setPoint(preset.temperature);
     setActivePresetId(preset.id);
-    api.getStatus()
+    api.setPoint(preset.temperature)
+      .then(() => api.getStatus())
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
