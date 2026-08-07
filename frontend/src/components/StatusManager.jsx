@@ -153,6 +153,10 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
     };
 
     checkUpdate();
+    // In kiosk la pagina non si ricarica mai: senza un poll periodico un
+    // aggiornamento pubblicato dopo il boot non verrebbe mai segnalato.
+    const interval = setInterval(checkUpdate, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [enqueueSnackbar]);
 
   // Filter cleaning alert

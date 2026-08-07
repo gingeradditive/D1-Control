@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **Il check aggiornamenti gira solo al mount**
-      ([StatusManager.jsx:125-156](frontend/src/components/StatusManager.jsx#L125-L156)). In
-      kiosk la pagina non si ricarica mai → un aggiornamento pubblicato dopo il boot non viene
-      mai segnalato.
 - [ ] **`checkG1OS` senza `catch`** ([App.jsx:40-45](frontend/src/App.jsx#L40-L45)) → unhandled
       rejection se il backend non risponde.
 - [ ] **`Grid item xs={4}`** ([SettingsDialog.jsx:249](frontend/src/components/SettingsDialog.jsx#L249)):
