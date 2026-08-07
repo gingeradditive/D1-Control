@@ -38,6 +38,8 @@ _HEAT_STALL_MINUTES = 10
 _HEAT_STALL_MIN_DELTA = 2.0  # °C attesi in finestra
 _HEAT_STALL_KEY = "Heating stalled: heater ON but temperature not rising"
 
+_UNEXPECTED_RESTART_KEY = "Previous drying cycle was interrupted by an unexpected restart"
+
 
 class DryerController:
     def __init__(self, config):
@@ -91,6 +93,13 @@ class DryerController:
 
         # registro errori limitato (TTL + tetto massimo): vedi backend/core/errors.py
         self.errors = ErrorRegistry()
+
+        # "acceso" non persistente: se il processo precedente si è fermato
+        # mentre il dryer era in funzione (crash, OOM, riavvio imprevisto),
+        # avvisa l'operatore invece di ripartire spento in silenzio.
+        if self.config.get("was_running", False, bool):
+            self.errors.record(_UNEXPECTED_RESTART_KEY, sticky=True)
+            print("[DryerController] Sessione precedente interrotta da un riavvio imprevisto.")
 
         # rilevamento "riscalda ma non sale": vedi _HEAT_STALL_* sotto
         self._heat_stall_baseline = None
@@ -175,6 +184,7 @@ class DryerController:
         if self.sensor_fault:
             print("[DryerController] Start blocked: sensor fault active.", file=sys.stderr)
             return False
+        self.errors.pop(_UNEXPECTED_RESTART_KEY, None)
         if not self.dryer_status:
             self.dryer_status = True
             self.cooldown_active = False
@@ -184,10 +194,16 @@ class DryerController:
             self.valve.close()
             self.valve_last_switch_time = time.monotonic()
             self.last_heater_toggle = time.monotonic()
+            self.config.set("was_running", True)
             print("Dryer started.")
         return True
 
     def stop(self):
+        # Va ripulito anche se dryer_status è già False: un riavvio spegne il
+        # dryer senza passare da qui, e l'operatore deve poter riconoscere
+        # l'avviso di riavvio imprevisto fermando esplicitamente il ciclo.
+        self.config.set("was_running", False)
+        self.errors.pop(_UNEXPECTED_RESTART_KEY, None)
         if self.dryer_status:
             self._accumulate_session_hours()
             self.dryer_status = False

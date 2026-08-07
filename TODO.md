@@ -14,8 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Stato "acceso" non persistente**: dopo un riavvio imprevisto il dryer resta spento senza
-      alcuna segnalazione all'operatore che il ciclo è stato interrotto.
 - [ ] **Messaggi misti italiano/inglese** in log e UI (`"Setpoint aggiornato a"` accanto a
       `"Heater ON"`). Scegliere una lingua per i log e una per la UI (UTILIZZARE INGLESE)
 - [ ] **`screensaver_delay` è una chiave di config morta**: il codice usa
