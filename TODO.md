@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Media/filtro sulle letture.** Il MAX6675 converte in ~220 ms e viene letto a 1 Hz senza
-      filtro: la temperatura mostrata è un singolo campione rumoroso. Media mobile su 3-5
-      letture.
 - [ ] **Il MAX6675 non logga mai il raw in caso di anomalia**
       ([sensors.py:38-43](backend/dryer/components/sensors.py#L38-L43)). Con i due byte grezzi
       a disposizione questo bug si sarebbe diagnosticato in un minuto.

@@ -71,6 +71,12 @@ class DryerController:
         self.cooldown_active = False
         self.valve_last_switch_time = time.monotonic()
 
+        # media mobile sulle letture valide: il MAX6675 converte in ~220ms ed è
+        # letto a 1Hz, il campione grezzo è rumoroso. Il filtro agisce solo sul
+        # valore usato per storia/controllo/UI, non sulla validazione del fault
+        # (quella resta sul campione grezzo, per reagire subito a un'anomalia).
+        self._temp_filter = deque(maxlen=4)
+
         # deadman heartbeat: aggiornato ad ogni iterazione del loop di controllo,
         # sorvegliato da ControlLoopWatchdog (backend/core/watchdog.py)
         self._last_loop_beat = time.monotonic()
@@ -188,8 +194,11 @@ class DryerController:
                         self.sensor_fault_desc = None
                     print("[DryerController] Sensor fault cleared — readings back to normal.")
 
-            self.history.append((now, temperature, self.ssr_heater, self.ssr_fan, self.valve_is_open))
-            return now, temperature
+            self._temp_filter.append(temperature)
+            filtered_temp = sum(self._temp_filter) / len(self._temp_filter)
+
+            self.history.append((now, filtered_temp, self.ssr_heater, self.ssr_fan, self.valve_is_open))
+            return now, filtered_temp
 
         # --- invalid reading ---
         self._sensor_good_streak = 0
