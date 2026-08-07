@@ -103,8 +103,13 @@ else
     warn "Swapfile già presente, salto"
 fi
 
-# Riduci swappiness: il kernel evita di usare swap se possibile
-sudo sysctl -q vm.swappiness=10
+# Riduci swappiness: il kernel evita di usare swap se possibile.
+# In chroot /proc è condiviso con l'host della CI: applicare sysctl live
+# modificherebbe il kernel dell'host, non quello dell'immagine. La riga in
+# sysctl.conf sotto la applica comunque al primo boot reale.
+if [ "$IS_BUILD" = 0 ]; then
+    sudo sysctl -q vm.swappiness=10
+fi
 grep -q "vm.swappiness" /etc/sysctl.conf \
     && sudo sed -i 's/^vm.swappiness=.*/vm.swappiness=10/' /etc/sysctl.conf \
     || echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf

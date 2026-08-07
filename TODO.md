@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Installazione / sistema
 
-- [ ] **`sudo sysctl` e `sudo swapon` non sono sotto la guardia `IS_BUILD`**
-      ([install.sh:107](scripts/install.sh#L107)) — in chroot possono fallire.
 - [ ] **`reverse_proxy.py` importa `httpx`, assente da `requirements.txt`.**
 - [ ] **`import board` in [scanner.py](backend/network/scanner.py)**: import inutilizzato di
       Adafruit Blinka, **non dichiarato in `requirements.txt`**. Oggi funziona solo perché il
