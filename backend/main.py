@@ -77,4 +77,7 @@ app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
 # 🚀 ENTRYPOINT (Uvicorn)
 # ---------------------------
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=False)
+    # Solo loopback: l'accesso dalla rete passa da nginx (porta 80), che fa da
+    # unico punto di ingresso. Gli endpoint distruttivi (update/apply, config/reset,
+    # network/connect) non devono essere raggiungibili direttamente dalla LAN.
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)

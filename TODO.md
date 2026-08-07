@@ -14,15 +14,16 @@ Legenda priorità:
 
 ## 🔴 Critici
 
-### 1. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
+### 1. Nessuna autenticazione sugli endpoint distruttivi
 
-Il backend ascolta su `0.0.0.0:8000` (oltre a nginx su :80) senza alcuna autenticazione, ed
-espone `POST /api/update/apply` (git pull + reboot), `POST /api/config/reset`,
-`POST /api/network/connect`, `POST /api/config/timezone`. Chiunque sulla LAN può riavviare
-o riconfigurare la macchina. Confermato: le porte 80, 3000 e 8000 rispondono da rete.
+Backend e frontend ora ascoltano solo su `127.0.0.1` e l'unico ingresso dalla rete è nginx
+sulla :80, ma su quella porta non c'è ancora alcuna autenticazione: chiunque sulla LAN può
+chiamare `POST /api/update/apply` (git pull + reboot), `POST /api/config/reset`,
+`POST /api/network/connect`, `POST /api/config/timezone` e riavviare o riconfigurare la
+macchina.
 
-**Fix minimo**: bindare uvicorn su `127.0.0.1` (nginx fa già da proxy), chiudere la 3000, e
-valutare un token per gli endpoint distruttivi.
+**Da decidere**: un token (o una PIN lato UI) per gli endpoint distruttivi, tenendo conto che
+il kiosk locale deve continuare a funzionare senza interazione.
 
 ---
 

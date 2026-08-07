@@ -259,7 +259,7 @@ NotifyAccess=main
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR
 Environment=PYTHONUNBUFFERED=1
-ExecStart=$VENV/bin/python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level warning
+ExecStart=$VENV/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --log-level warning
 ExecStop=/bin/kill -SIGTERM \$MAINPID
 
 # Deadman: il backend manda WATCHDOG=1 finché il loop di controllo gira.
@@ -308,7 +308,7 @@ After=network.target
 [Service]
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR/frontend
-ExecStart=$SERVE_PATH -s dist -l 3000 --no-clipboard
+ExecStart=$SERVE_PATH -s dist -l tcp://127.0.0.1:3000 --no-clipboard
 ExecStop=/bin/kill -SIGTERM \$MAINPID
 
 # Riavvio automatico: solo su crash
