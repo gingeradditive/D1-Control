@@ -1,5 +1,8 @@
+import logging
 from pathlib import Path
 from backend.update.system_control import run_command
+
+logger = logging.getLogger(__name__)
 
 
 def mark_directory_safe(project_path: Path):
@@ -29,9 +32,18 @@ def get_current_version(project_path: Path) -> dict:
 
 
 def is_update_available(project_path: Path) -> bool:
-    """Controlla se ci sono aggiornamenti disponibili"""
-    mark_directory_safe(project_path)
-    run_command("git fetch", cwd=project_path)
-    local = run_command("git rev-parse HEAD", cwd=project_path).strip()
-    remote = run_command("git rev-parse @{u}", cwd=project_path).strip()
-    return local != remote
+    """Controlla se ci sono aggiornamenti disponibili.
+
+    `git fetch` richiede rete: senza connessione non è un errore, è uno stato
+    "non determinabile" — trattato come "nessun aggiornamento" invece di far
+    fallire la richiesta con un 500 all'apertura della UI.
+    """
+    try:
+        mark_directory_safe(project_path)
+        run_command("git fetch", cwd=project_path)
+        local = run_command("git rev-parse HEAD", cwd=project_path).strip()
+        remote = run_command("git rev-parse @{u}", cwd=project_path).strip()
+        return local != remote
+    except RuntimeError as e:
+        logger.warning(f"Impossibile verificare gli aggiornamenti (probabile assenza di rete): {e}")
+        return False

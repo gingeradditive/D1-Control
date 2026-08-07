@@ -16,9 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`is_update_available()` fa `git fetch` sincrono**
-      ([git_manager.py](backend/update/git_manager.py)): senza rete solleva → 500 all'apertura
-      della UI. Va gestito come "non determinabile", non come errore.
 - [ ] **`git clean -fd`** ([git_manager.py](backend/update/git_manager.py)) cancella qualsiasi
       file non tracciato e non ignorato presente sul dispositivo. `config.json`, `presets.json`
       e `logs/` sono in `.gitignore` quindi sopravvivono, ma il margine è sottile: aggiungere
