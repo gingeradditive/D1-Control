@@ -103,8 +103,13 @@ else
     warn "Swapfile già presente, salto"
 fi
 
-# Riduci swappiness: il kernel evita di usare swap se possibile
-sudo sysctl -q vm.swappiness=10
+# Riduci swappiness: il kernel evita di usare swap se possibile.
+# In chroot /proc è condiviso con l'host della CI: applicare sysctl live
+# modificherebbe il kernel dell'host, non quello dell'immagine. La riga in
+# sysctl.conf sotto la applica comunque al primo boot reale.
+if [ "$IS_BUILD" = 0 ]; then
+    sudo sysctl -q vm.swappiness=10
+fi
 grep -q "vm.swappiness" /etc/sysctl.conf \
     && sudo sed -i 's/^vm.swappiness=.*/vm.swappiness=10/' /etc/sysctl.conf \
     || echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
@@ -137,7 +142,7 @@ sudo apt-get install --no-install-recommends -y \
     lightdm \
     lightdm-gtk-greeter \
     unclutter \
-    chromium-browser \
+    chromium \
     python3-venv \
     python3-pip \
     git \
@@ -227,6 +232,20 @@ MaxRetentionSec=7day
 EOF
 service_runtime restart systemd-journald || true
 
+# ─── Watchdog hardware ────────────────────────────────────────────────────────
+# Ultimo livello di protezione: se systemd stesso si blocca (freeze del kernel,
+# thrashing di memoria) il watchdog hardware del Pi riavvia la macchina, e al
+# boot il riscaldatore riparte spento.
+
+section "WATCHDOG HARDWARE"
+sudo mkdir -p /etc/systemd/system.conf.d
+sudo tee /etc/systemd/system.conf.d/watchdog.conf > /dev/null <<EOF
+[Manager]
+RuntimeWatchdogSec=15
+RebootWatchdogSec=2min
+EOF
+log "Watchdog hardware configurato (RuntimeWatchdogSec=15)"
+
 # ─── Servizi systemd ──────────────────────────────────────────────────────────
 
 section "SERVIZI SYSTEMD"
@@ -240,13 +259,20 @@ After=network.target pigpiod.service
 Wants=pigpiod.service
 
 [Service]
+Type=notify
+NotifyAccess=main
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR
 Environment=PYTHONUNBUFFERED=1
-ExecStart=$VENV/bin/python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level warning
+ExecStart=$VENV/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --log-level warning
 ExecStop=/bin/kill -SIGTERM \$MAINPID
 
-# Riavvio automatico: solo su crash, non su stop intenzionale
+# Deadman: il backend manda WATCHDOG=1 finché il loop di controllo gira.
+# Se il loop si blocca il ping si ferma e systemd riavvia il processo,
+# che rifà il setup GPIO con l'SSR del riscaldatore a LOW.
+WatchdogSec=30
+
+# Riavvio automatico: solo su crash (il kill da watchdog conta come crash)
 Restart=on-failure
 RestartSec=5
 StartLimitIntervalSec=120
@@ -287,7 +313,7 @@ After=network.target
 [Service]
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR/frontend
-ExecStart=$SERVE_PATH -s dist -l 3000 --no-clipboard
+ExecStart=$SERVE_PATH -s dist -l tcp://127.0.0.1:3000 --no-clipboard
 ExecStop=/bin/kill -SIGTERM \$MAINPID
 
 # Riavvio automatico: solo su crash
@@ -337,6 +363,10 @@ service_runtime start pigpiod.service
 section "PERMESSI RETE"
 sudo usermod -aG netdev "$USERNAME"
 
+# Lettura journald senza sudo: usata da GET /api/logs per esporre i log del
+# servizio nella UI, dato che SSH è chiuso e journalctl da remoto non è raggiungibile.
+sudo usermod -aG systemd-journal "$USERNAME"
+
 sudo tee /etc/polkit-1/localauthority/50-local.d/10-nmcli.pkla > /dev/null <<EOF
 [Allow NetworkManager all permissions for user]
 Identity=unix-user:$USERNAME
@@ -350,7 +380,6 @@ EOF
 
 section "HARDWARE SPI/I2C"
 for PARAM in "dtparam=spi=on" "dtparam=i2c_arm=on"; do
-    KEY="${PARAM%%=*}=${PARAM##*=on}"   # dtparam=spi / dtparam=i2c_arm
     sudo sed -i "s/^#${PARAM}/${PARAM}/" "$BOOT_CONFIG" || true
     grep -q "^${PARAM}" "$BOOT_CONFIG" || echo "$PARAM" | sudo tee -a "$BOOT_CONFIG"
 done
@@ -359,13 +388,26 @@ for MOD in spi-dev i2c-dev; do
     grep -q "^$MOD" /etc/modules || echo "$MOD" | sudo tee -a /etc/modules
 done
 
-# ─── Sudo reboot senza password ───────────────────────────────────────────────
+# ─── Sudo senza password (reboot + scope di update) ───────────────────────────
 
 section "SUDO REBOOT"
 REBOOT_PATH=$(which reboot)
+SYSTEMD_RUN_PATH=$(which systemd-run || echo /usr/bin/systemd-run)
+TIMEDATECTL_PATH=$(which timedatectl || echo /usr/bin/timedatectl)
 SUDOERS_FILE=/etc/sudoers.d/dryer-reboot
+# La seconda regola serve a backend/update/system_control.py per eseguire
+# `pip install` e la build del frontend fuori dal cgroup del servizio, che ha
+# MemoryMax=400M e farebbe intervenire l'OOM killer. Il comando finale gira
+# comunque come $USERNAME grazie a runuser, quindi non concede privilegi extra.
+# Deve restare identica a _scope_prefix() in system_control.py.
+# La terza regola serve a backend/core/config/system_config.py: senza di essa
+# `sudo timedatectl set-timezone` chiede la password e il cambio fuso orario
+# fallisce in silenzio. Il nome della timezone e' validato lato backend contro
+# `timedatectl list-timezones`.
 sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
 $USERNAME ALL=NOPASSWD: $REBOOT_PATH
+$USERNAME ALL=NOPASSWD: $SYSTEMD_RUN_PATH --scope --quiet --collect --unit=dryer-update -p MemoryMax=infinity -p MemorySwapMax=infinity runuser -u $USERNAME -- /bin/sh -c *
+$USERNAME ALL=NOPASSWD: $TIMEDATECTL_PATH set-timezone *
 EOF
 sudo chmod 440 "$SUDOERS_FILE"
 sudo visudo -c -f "$SUDOERS_FILE" || { err "sudoers non valido, rimuovo"; sudo rm "$SUDOERS_FILE"; exit 1; }
@@ -382,7 +424,14 @@ xset s noblank
 unclutter -idle 0 &
 
 # Avvia Chromium in modalità kiosk
-chromium-browser \\
+# --disable-gpu: workaround per l'accelerazione VideoCore su Raspberry Pi OS,
+# nota per andare in crash o restare con schermo nero in modalità kiosk quando
+# l'accelerazione GPU di Chromium è attiva (driver Mesa/V3D non completamente
+# supportato). Va tenuto insieme a --disable-software-rasterizer: senza
+# accelerazione GPU, SwiftShader (il rasterizzatore software di fallback)
+# consumerebbe CPU/RAM inutili su un dispositivo già limitato (1.7GB RAM).
+# Costa fluidità alle animazioni ma evita crash/schermo nero sull'hardware target.
+chromium \\
   --noerrdialogs \\
   --disable-infobars \\
   --kiosk \\

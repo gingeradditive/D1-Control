@@ -37,8 +37,12 @@ export default function App() {
 
   useEffect(() => {
     const checkG1OS = async () => {
-      const result = await api.getconnectionG1OS();
-      setShowBackButton(result.data.status === true);
+      try {
+        const result = await api.getconnectionG1OS();
+        setShowBackButton(result.data.status === true);
+      } catch (err) {
+        console.error('Error checking G1OS connection:', err);
+      }
     };
     checkG1OS();
   }, []);

@@ -5,32 +5,43 @@ from fastapi.middleware.cors import CORSMiddleware
 from threading import Thread
 import time
 
-from backend.api.routes import dryer, network, update, config, stats, presets
+from backend.api.routes import dryer, network, update, config, stats, presets, health, logs, ws
 from backend.core.background import background_loop
 from backend.core.state import controllers
+from backend.core.watchdog import ControlLoopWatchdog, sd_notify
 
 # ---------------------------
 # ⚙️ BACKGROUND LOOP (dryer)
 # ---------------------------
 _running = True
 _thread = None
+_watchdog = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _thread, _running
-    print("[Startup] Avvio ciclo di background del dryer...")
+    global _thread, _running, _watchdog
+    print("[Startup] Starting dryer background loop...")
     _thread = Thread(target=background_loop, args=(controllers, lambda: _running))
     _thread.daemon = True
     _thread.start()
+
+    # Deadman sul loop: se si ferma, il riscaldatore va spento comunque.
+    _watchdog = ControlLoopWatchdog(controllers, lambda: _running)
+    _watchdog.start()
+
+    sd_notify("READY=1")
     yield
-    print("[Shutdown] Arresto in corso...")
+    print("[Shutdown] Shutting down...")
+    sd_notify("STOPPING=1")
     _running = False
     if _thread:
         _thread.join(timeout=3)
+    if _watchdog:
+        _watchdog.join(timeout=3)
     try:
         controllers["dryer"].shutdown()
     except Exception as e:
-        print(f"[Shutdown] Errore in chiusura dryer: {e}")
+        print(f"[Shutdown] Error while shutting down dryer: {e}")
 
 app = FastAPI(title="Dryer Control API", lifespan=lifespan)
 
@@ -61,9 +72,15 @@ app.include_router(update.router, prefix="/api/update", tags=["Update"])
 app.include_router(config.router, prefix="/api/config", tags=["Config"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Stats"])
 app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
+app.include_router(health.router, prefix="/api/health", tags=["Health"])
+app.include_router(logs.router, prefix="/api/logs", tags=["Logs"])
+app.include_router(ws.router, prefix="/ws", tags=["WebSocket"])
 
 # ---------------------------
 # 🚀 ENTRYPOINT (Uvicorn)
 # ---------------------------
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=False)
+    # Solo loopback: l'accesso dalla rete passa da nginx (porta 80), che fa da
+    # unico punto di ingresso. Gli endpoint distruttivi (update/apply, config/reset,
+    # network/connect) non devono essere raggiungibili direttamente dalla LAN.
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)

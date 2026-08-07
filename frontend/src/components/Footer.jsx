@@ -141,7 +141,6 @@ export default function Footer({ status, onStatusChange, heater, fan, valve, sen
         <CheckLight
           heaterOn={heater}
           fanOn={fan}
-          timerSet={false} // TODO: implement timerSet logic
           valveOpen={valve}
         />
         <Box position="relative" display="flex" justifyContent="end" alignItems="center" ml={3}>

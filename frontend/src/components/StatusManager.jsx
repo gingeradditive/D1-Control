@@ -3,7 +3,7 @@ import { Box, IconButton } from '@mui/material';
 import TemperatureDisplay from './TemperatureDisplay';
 import Controls from './Controls';
 import Footer from './Footer';
-import { api } from '../api';
+import { api, STATUS_WS_URL } from '../api';
 import ScreensaverOverlay from './ScreensaverOverlay';
 import { useSnackbar } from 'notistack';
 import CloseIcon from '@mui/icons-material/Close';
@@ -100,25 +100,97 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
     fetchTimeout();
   }, []);
 
-  // Fetch status regolarmente
+  // Stato via WebSocket: nginx ha già /ws/ configurato, e il backend spinge
+  // un aggiornamento solo quando qualcosa cambia. Sostituisce gli 86400
+  // polling HTTP/giorno di prima (1 req/s) con un'unica connessione persistente.
+  // Se il WebSocket non è disponibile (rete/proxy che lo blocca), si torna al
+  // polling HTTP come fallback.
   useEffect(() => {
-    const interval = setInterval(() => {
-      api.getStatus()
-        .then(res => {
-          setStatus(res.data);
-          if (onBackendAvailabilityChange) {
-            onBackendAvailabilityChange(true);
-          }
-        })
-        .catch(err => {
-          console.error("Errore nel fetch /status:", err);
-          if (onBackendAvailabilityChange) {
-            onBackendAvailabilityChange(false);
-          }
-        });
-    }, 1000);
+    let cancelled = false;
+    let ws = null;
+    let reconnectTimer = null;
+    let pollInterval = null;
+    let pollInFlight = false;
+    let everConnected = false;
 
-    return () => clearInterval(interval);
+    const applyStatus = (data) => {
+      setStatus(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data));
+    };
+
+    const startPolling = () => {
+      if (pollInterval) return;
+      pollInterval = setInterval(() => {
+        if (pollInFlight) return;
+        pollInFlight = true;
+        api.getStatus()
+          .then(res => {
+            applyStatus(res.data);
+            onBackendAvailabilityChange?.(true);
+          })
+          .catch(err => {
+            console.error("Errore nel fetch /status:", err);
+            onBackendAvailabilityChange?.(false);
+          })
+          .finally(() => {
+            pollInFlight = false;
+          });
+      }, 1000);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    const connect = () => {
+      if (cancelled) return;
+      ws = new WebSocket(STATUS_WS_URL);
+
+      ws.onopen = () => {
+        everConnected = true;
+        stopPolling();
+        onBackendAvailabilityChange?.(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          applyStatus(JSON.parse(event.data));
+          onBackendAvailabilityChange?.(true);
+        } catch (err) {
+          console.error("Errore nel parsing del messaggio /ws/status:", err);
+        }
+      };
+
+      ws.onerror = () => {
+        // onclose viene comunque emesso dopo onerror: la riconnessione/fallback
+        // avviene lì per evitare doppia gestione.
+      };
+
+      ws.onclose = () => {
+        if (cancelled) return;
+        onBackendAvailabilityChange?.(false);
+        // Se non si è mai connesso (proxy/rete che blocca i WebSocket), niente
+        // retry a raffica: si passa al polling HTTP come fallback stabile.
+        if (!everConnected) {
+          startPolling();
+        }
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+        ws.close();
+      }
+    };
   }, [onBackendAvailabilityChange]);
 
   // Controllo aggiornamenti
@@ -153,6 +225,10 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
     };
 
     checkUpdate();
+    // In kiosk la pagina non si ricarica mai: senza un poll periodico un
+    // aggiornamento pubblicato dopo il boot non verrebbe mai segnalato.
+    const interval = setInterval(checkUpdate, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [enqueueSnackbar]);
 
   // Filter cleaning alert
@@ -196,12 +272,12 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
     return () => clearInterval(interval);
   }, [enqueueSnackbar, closeSnackbar]);
 
-  // Event handler per interazione utente
+  // Event handler per interazione utente. Aggiorna sempre lo stato invece di
+  // leggere isScreensaverActive da una closure che l'effect sotto non ricrea
+  // quando lo screensaver si attiva: la condizione sarebbe rimasta stale.
   const resetTimer = () => {
     lastInteractionTime.current = Date.now();
-    if (isScreensaverActive) {
-      setIsScreensaverActive(false);
-    }
+    setIsScreensaverActive(false);
   };
 
   // Gestione inattività
@@ -224,38 +300,43 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
   }, [inactivityTimeout, isKiosk]);
 
   const handleIncrease = () => {
-    let newSet = Math.min(status.setpoint + 5, 70);
-    api.setPoint(newSet);
+    let newSet = Math.min(status.setpoint + 5, 90);
     setActivePresetId(null);
-    api.getStatus()
+    api.setPoint(newSet)
+      .then(() => api.getStatus())
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
 
   const handleDecrease = () => {
     let newSet = Math.max(status.setpoint - 5, 0);
-    api.setPoint(newSet);
     setActivePresetId(null);
-    api.getStatus()
+    api.setPoint(newSet)
+      .then(() => api.getStatus())
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
 
   const handlePresetSelect = (preset) => {
-    api.setPoint(preset.temperature);
     setActivePresetId(preset.id);
-    api.getStatus()
+    api.setPoint(preset.temperature)
+      .then(() => api.getStatus())
       .then(res => setStatus(res.data))
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
 
   const handleStatusChange = () => {
     api.setStatus(!status.status)
-      .then(() => {
-        setStatus(prev => ({ ...prev, status: !prev.status }));
+      .then(res => {
+        // niente update ottimistico: si applica lo stato reale riportato dal backend
+        setStatus(prev => ({ ...prev, status: res.data?.running ?? prev.status }));
       })
       .catch(err => {
-        if (err?.response?.status === 400) {
+        const code = err?.response?.status;
+        if (code === 400 || code === 409) {
+          if (typeof err.response.data?.running === "boolean") {
+            setStatus(prev => ({ ...prev, status: err.response.data.running }));
+          }
           const detail = err.response.data?.detail || "Cannot start: sensor fault detected";
           enqueueSnackbar(detail, { variant: "error", persist: true,
             action: (id) => (

@@ -2,6 +2,7 @@ import time
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from backend.core.state import controllers
+from backend.core.constants import SETPOINT_TEMP_MIN, SETPOINT_TEMP_MAX
 
 router = APIRouter()
 
@@ -12,14 +13,18 @@ def get_status():
     elapsed = 0
     if dryer.dryer_status and dryer.session_start_time is not None:
         elapsed = int(time.monotonic() - dryer.session_start_time)
+    # Con un fault sensore il valore in memoria è l'ultima lettura buona, tenuta
+    # solo per far lavorare update_heater in sicurezza. Esporla mostrerebbe un
+    # numero fermo che sembra valido: meglio nessun valore, la UI mostra "--".
+    current_temp = None if dryer.sensor_fault or temp is None else round(temp, 2)
     return {
         "setpoint": dryer.set_temp,
-        "current_temp": round(temp),
+        "current_temp": current_temp,
         "heater": heater,
         "fan": fan,
         "status": dryer.dryer_status,
         "valve": valve,
-        "errors": dryer.errors,
+        "errors": dryer.errors.snapshot(),
         "sensor_fault": dryer.sensor_fault,
         "drying_elapsed_seconds": elapsed,
     }
@@ -27,14 +32,26 @@ def get_status():
 @router.post("/status/{status}")
 def set_status(status: bool):
     dryer = controllers["dryer"]
-    if status and dryer.sensor_fault:
-        fault_detail = dryer.errors.get("sensor_fault", "Sensor fault detected")
-        return JSONResponse(
-            status_code=400,
-            content={"error": "sensor_fault", "detail": fault_detail},
-        )
-    dryer.start() if status else dryer.stop()
-    return {"status": "running" if status else "stopped"}
+    if status:
+        # start() è l'unica fonte di verità: può rifiutare l'avvio anche se il
+        # fault è comparso tra la richiesta e questo istante.
+        if not dryer.start():
+            fault_detail = dryer.sensor_fault_desc or "Sensor fault detected"
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "error": "sensor_fault",
+                    "detail": fault_detail,
+                    "status": "running" if dryer.dryer_status else "stopped",
+                    "running": dryer.dryer_status,
+                },
+            )
+    else:
+        dryer.stop()
+    return {
+        "status": "running" if dryer.dryer_status else "stopped",
+        "running": dryer.dryer_status,
+    }
 
 @router.get("/history")
 def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
@@ -56,8 +73,11 @@ def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
 
 @router.post("/setpoint/{value}")
 def set_setpoint(value: float):
-    if not (0 <= value <= 90):
-        raise HTTPException(status_code=422, detail="Setpoint out of range [0, 90]°C")
+    if not (SETPOINT_TEMP_MIN <= value <= SETPOINT_TEMP_MAX):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Setpoint out of range [{SETPOINT_TEMP_MIN}, {SETPOINT_TEMP_MAX}]°C",
+        )
     dryer = controllers["dryer"]
     dryer.update_setpoint(value)
     return {"setpoint": dryer.set_temp}
@@ -85,21 +105,21 @@ def get_purge_time():
     dryer = controllers["dryer"]
     return {"purge_time": dryer.purge_time}
 
-@router.post("/purge-time/{seconds}")
-def set_purge_time(seconds: int):
+@router.post("/purge-time/{minutes}")
+def set_purge_time(minutes: int):
     dryer = controllers["dryer"]
-    dryer.purge_time = seconds
-    dryer.config.set("purge_time", seconds)
-    return {"purge_time": seconds}
+    dryer.purge_time = minutes
+    dryer.config.set("purge_time", minutes)
+    return {"purge_time": minutes}
 
 @router.get("/cycle-time")
 def get_cycle_time():
     dryer = controllers["dryer"]
     return {"cycle_time": dryer.cycle_time}
 
-@router.post("/cycle-time/{seconds}")
-def set_cycle_time(seconds: int):
+@router.post("/cycle-time/{minutes}")
+def set_cycle_time(minutes: int):
     dryer = controllers["dryer"]
-    dryer.cycle_time = seconds
-    dryer.config.set("cycle_time", seconds)
-    return {"cycle_time": seconds}
+    dryer.cycle_time = minutes
+    dryer.config.set("cycle_time", minutes)
+    return {"cycle_time": minutes}

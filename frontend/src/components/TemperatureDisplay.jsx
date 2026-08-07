@@ -97,7 +97,7 @@ export default function TemperatureDisplay({ currentTemp, setpoint, status, dryi
           }}
         >
           <Typography variant="h2" pl={3} className="temperature-degree">
-            {currentTemp !== null ? `${currentTemp}` : "--"}
+            {currentTemp !== null ? `${Math.round(currentTemp)}` : "--"}
           </Typography>
           <Typography variant="body2" color="gray" className="temperature-degree">
             Set {setpoint !== null ? `${setpoint}` : ""}

@@ -1,17 +1,23 @@
 import json
 import os
 import tempfile
+import threading
 import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from backend.core.state import controllers
+from backend.core.constants import SETPOINT_TEMP_MIN, SETPOINT_TEMP_MAX
 
 router = APIRouter()
 
 PRESETS_FILE = "presets.json"
 MAX_PINNED_PRESETS = 3
 DEFAULT_PINNED_PRESET_IDS = ["pla", "petg"]
+
+# Serializza le sequenze leggi->modifica->scrivi su presets.json: os.replace()
+# rende atomica solo la sostituzione del file, non l'intera read-modify-write.
+_presets_lock = threading.Lock()
 
 HARDCODED_PRESETS = [
     {
@@ -29,8 +35,8 @@ HARDCODED_PRESETS = [
 ]
 
 
-TEMP_MIN = 0
-TEMP_MAX = 70
+TEMP_MIN = SETPOINT_TEMP_MIN
+TEMP_MAX = SETPOINT_TEMP_MAX
 
 
 class PresetCreate(BaseModel):
@@ -70,7 +76,7 @@ def _write_user_presets(presets: list[dict]) -> None:
             tmp_path = tmp.name
         os.replace(tmp_path, PRESETS_FILE)
     except Exception as e:
-        print(f"[Presets] Errore nel salvare {PRESETS_FILE}: {e}")
+        print(f"[Presets] Error saving {PRESETS_FILE}: {e}")
         if tmp_path:
             try:
                 os.unlink(tmp_path)
@@ -95,6 +101,17 @@ def _all_presets() -> list[dict]:
     for p in user_presets:
         p["builtin"] = False
     return HARDCODED_PRESETS + user_presets
+
+
+def _set_pinned(preset_id: str, pinned: bool) -> None:
+    """`pinned_preset_ids` in config è l'unica fonte di verità per lo stato pinned."""
+    pinned_ids = _get_pinned_ids()
+    if pinned:
+        if preset_id not in pinned_ids and len(pinned_ids) < MAX_PINNED_PRESETS:
+            controllers["config"].set("pinned_preset_ids", pinned_ids + [preset_id])
+    else:
+        if preset_id in pinned_ids:
+            controllers["config"].set("pinned_preset_ids", [i for i in pinned_ids if i != preset_id])
 
 
 def _get_pinned_ids() -> list[str]:
@@ -147,19 +164,24 @@ def update_pinned_presets(payload: PinnedPresetsUpdate):
 def create_preset(preset: PresetCreate):
     if preset.temperature < TEMP_MIN or preset.temperature > TEMP_MAX:
         raise HTTPException(status_code=400, detail=f"Temperature must be between {TEMP_MIN} and {TEMP_MAX}°C")
-    all_presets = HARDCODED_PRESETS + _read_user_presets()
-    if any(p["name"].strip().lower() == preset.name.strip().lower() for p in all_presets):
-        raise HTTPException(status_code=409, detail=f"A preset named '{preset.name}' already exists")
-    user_presets = _read_user_presets()
-    new_preset = {
-        "id": str(uuid.uuid4())[:8],
-        "name": preset.name,
-        "temperature": preset.temperature,
-        "pinned": preset.pinned,
-        "builtin": False,
-    }
-    user_presets.append(new_preset)
-    _write_user_presets(user_presets)
+    with _presets_lock:
+        all_presets = HARDCODED_PRESETS + _read_user_presets()
+        if any(p["name"].strip().lower() == preset.name.strip().lower() for p in all_presets):
+            raise HTTPException(status_code=409, detail=f"A preset named '{preset.name}' already exists")
+        user_presets = _read_user_presets()
+        new_preset = {
+            "id": str(uuid.uuid4())[:8],
+            "name": preset.name,
+            "temperature": preset.temperature,
+            "builtin": False,
+        }
+        user_presets.append(new_preset)
+        _write_user_presets(user_presets)
+
+    if preset.pinned:
+        _set_pinned(new_preset["id"], True)
+
+    new_preset["pinned"] = new_preset["id"] in _get_pinned_ids()
     return new_preset
 
 
@@ -173,23 +195,27 @@ def update_preset(preset_id: str, preset: PresetUpdate):
     if preset.temperature is not None and (preset.temperature < TEMP_MIN or preset.temperature > TEMP_MAX):
         raise HTTPException(status_code=400, detail=f"Temperature must be between {TEMP_MIN} and {TEMP_MAX}°C")
 
-    user_presets = _read_user_presets()
-    for p in user_presets:
-        if p["id"] == preset_id:
-            if preset.name is not None:
-                all_presets = HARDCODED_PRESETS + user_presets
-                if any(p2["name"].strip().lower() == preset.name.strip().lower() and p2["id"] != preset_id for p2 in all_presets):
-                    raise HTTPException(status_code=409, detail=f"A preset named '{preset.name}' already exists")
-                p["name"] = preset.name
-            if preset.temperature is not None:
-                p["temperature"] = preset.temperature
-            if preset.pinned is not None:
-                p["pinned"] = preset.pinned
-            _write_user_presets(user_presets)
-            p["builtin"] = False
-            return p
+    with _presets_lock:
+        user_presets = _read_user_presets()
+        for p in user_presets:
+            if p["id"] == preset_id:
+                if preset.name is not None:
+                    all_presets = HARDCODED_PRESETS + user_presets
+                    if any(p2["name"].strip().lower() == preset.name.strip().lower() and p2["id"] != preset_id for p2 in all_presets):
+                        raise HTTPException(status_code=409, detail=f"A preset named '{preset.name}' already exists")
+                    p["name"] = preset.name
+                if preset.temperature is not None:
+                    p["temperature"] = preset.temperature
+                _write_user_presets(user_presets)
+                break
+        else:
+            raise HTTPException(status_code=404, detail="Preset not found")
 
-    raise HTTPException(status_code=404, detail="Preset not found")
+    if preset.pinned is not None:
+        _set_pinned(preset_id, preset.pinned)
+    p["builtin"] = False
+    p["pinned"] = preset_id in _get_pinned_ids()
+    return p
 
 
 @router.delete("/{preset_id}")
@@ -198,10 +224,11 @@ def delete_preset(preset_id: str):
         if bp["id"] == preset_id:
             raise HTTPException(status_code=400, detail="Cannot delete built-in presets")
 
-    user_presets = _read_user_presets()
-    new_presets = [p for p in user_presets if p["id"] != preset_id]
-    if len(new_presets) == len(user_presets):
-        raise HTTPException(status_code=404, detail="Preset not found")
+    with _presets_lock:
+        user_presets = _read_user_presets()
+        new_presets = [p for p in user_presets if p["id"] != preset_id]
+        if len(new_presets) == len(user_presets):
+            raise HTTPException(status_code=404, detail="Preset not found")
 
-    _write_user_presets(new_presets)
+        _write_user_presets(new_presets)
     return {"status": "deleted"}

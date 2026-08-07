@@ -78,7 +78,7 @@ const ScreensaverOverlay = ({ onExit, temperature, status }) => {
           }}
         >
           <Typography variant="h1" sx={{ fontSize: "150px" }} pl={3}>
-            {temperature !== null ? `${temperature}°` : "--"}
+            {temperature !== null ? `${Math.round(temperature)}°` : "--"}
           </Typography>
         </Box>
 

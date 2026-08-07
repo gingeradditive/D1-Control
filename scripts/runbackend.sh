@@ -13,4 +13,6 @@ echo "🐍 Attivazione ambiente virtuale..."
 source venv/bin/activate
 
 echo "🚀 Avvio del server FastAPI in modalità debug..."
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+# Come il servizio: solo loopback. Per esporlo temporaneamente in rete durante il
+# debug: HOST=0.0.0.0 ./runbackend.sh
+python -m uvicorn backend.main:app --host "${HOST:-127.0.0.1}" --port 8000

@@ -19,9 +19,12 @@ class Valve:
         self.disable_after = disable_after
         self._is_open = False
         self._pi = None
+        self._pending_timers: set[threading.Timer] = set()
         if IS_RASPBERRY:
             self._pi = pigpio.pi()
             # no explicit set here; controller can call set_pulse when needed
+            if not self._pi.connected:
+                print("[Valve] WARNING: pigpiod is not running or unreachable — the valve will not move.")
 
     def _map_angle_to_pulse(self, angle: float) -> int:
         # 0-180 -> 500-2500 microseconds
@@ -30,12 +33,22 @@ class Valve:
     def _set_angle(self, angle: float):
         pulse = self._map_angle_to_pulse(angle)
         if IS_RASPBERRY and self._pi:
+            if not self._pi.connected:
+                print(f"[Valve] WARNING: pigpiod not connected, cannot set angle {angle}")
+                return
             self._pi.set_servo_pulsewidth(self.servo_pin, pulse)
             # disable servo after small delay
-            threading.Timer(self.disable_after, lambda: self._pi.set_servo_pulsewidth(self.servo_pin, 0)).start()
+            timer = threading.Timer(self.disable_after, self._disable_pulse)
+            self._pending_timers.add(timer)
+            timer.start()
         else:
             # mock behavior
             print(f"[Valve MOCK] set_angle {angle}")
+
+    def _disable_pulse(self):
+        self._pending_timers.discard(threading.current_thread())
+        if self._pi and self._pi.connected:
+            self._pi.set_servo_pulsewidth(self.servo_pin, 0)
 
     def open(self):
         # in original: set_angle(10)
@@ -51,6 +64,10 @@ class Valve:
         return self._is_open
 
     def cleanup(self):
+        for timer in list(self._pending_timers):
+            timer.cancel()
+        self._pending_timers.clear()
         if IS_RASPBERRY and self._pi:
-            self._pi.set_servo_pulsewidth(self.servo_pin, 0)
+            if self._pi.connected:
+                self._pi.set_servo_pulsewidth(self.servo_pin, 0)
             self._pi.stop()

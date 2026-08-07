@@ -38,8 +38,12 @@ class Sensors:
                 raw = self.spi.readbytes(2)
                 if len(raw) == 2:
                     value = (raw[0] << 8) | raw[1]
-                    if not value & 0x4:
+                    if value & 0x4:
+                        print(f"[Sensors] MAX6675 fault bit set — raw bytes: {raw!r} (0x{value:04x})")
+                    else:
                         max6675_temp = (value >> 3) * 0.25
+                else:
+                    print(f"[Sensors] MAX6675 short read — expected 2 bytes, got: {raw!r}")
             return now, max6675_temp
         else:
             self._prev_temp += random.uniform(-0.5, 0.5)
