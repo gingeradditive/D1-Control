@@ -31,11 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **Controller catturati a import-time.** [update.py:6](backend/api/routes/update.py#L6),
-      [network.py:10](backend/api/routes/network.py#L10),
-      [config.py:5-6](backend/api/routes/config.py#L5-L6) fanno
-      `x = controllers["..."]` a livello di modulo: dopo un `/config/reload` puntano a
-      istanze sostituite. Il caso `dryer` è stato sistemato in `742d38d`, gli altri no.
 - [ ] **Limiti di temperatura incoerenti su tre livelli**: backend setpoint `0–90`
       ([dryer.py:58](backend/api/routes/dryer.py#L58)), preset `0–70`
       ([presets.py](backend/api/routes/presets.py)), UI clamp `0–70`
