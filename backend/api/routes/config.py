@@ -21,6 +21,21 @@ def set_config(key: str = Form(...), value: str = Form(...)):
     config.set(key, parsed)
     return {"status": "Success", "message": "Configuration updated"}
 
+@router.post("/apply")
+def apply_config():
+    """Push the saved configuration into the running controller.
+
+    Preferred over /reload: no GPIO cleanup, no lost history, no lost session.
+    """
+    dryer = controllers.get("dryer")
+    if dryer is None:
+        raise HTTPException(status_code=503, detail="Dryer controller not available")
+    try:
+        dryer.apply_config()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to apply configuration: {e}")
+    return {"status": "Success", "message": "Configuration applied"}
+
 @router.get("/reload")
 def reload_config():
     from backend.core.state import controllers, PROJECT_ROOT

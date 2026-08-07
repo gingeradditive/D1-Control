@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Typography, Box, Divider, CircularProgress,
@@ -38,6 +38,10 @@ export default function SettingsDialog({
   const { openKeyboard } = useKeyboard();
 
   const [config, setConfig] = useState(null);
+  // Last values known to be persisted on the backend: typing only touches
+  // `config`, so this is what a commit is compared against and what a bad
+  // input is reverted to.
+  const savedConfig = useRef({});
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
@@ -76,6 +80,7 @@ export default function SettingsDialog({
       })
       .then((res) => {
         setConfig(res.data);
+        savedConfig.current = { ...res.data };
       })
       .catch(() => {
         setSaveError("Failed to reset configuration.");
@@ -95,6 +100,7 @@ export default function SettingsDialog({
       api.getConfigurations()
         .then(response => {
           setConfig(response.data);
+          savedConfig.current = { ...response.data };
           setSaveError(null);
         })
         .catch(() => {
@@ -115,9 +121,26 @@ export default function SettingsDialog({
     }
   }, [open]);
 
-  // 🔧 Salvataggio immediato di config numerici
-  const handleConfigChange = (key, value) => {
-    const newValue = Number(value);
+  // 🔧 Digitazione: aggiorna solo lo stato locale, nessuna chiamata al backend
+  const handleConfigInput = (key, value) => {
+    setConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  // 💾 Commit su blur / invio: una sola scrittura per modifica reale
+  const commitConfigChange = (key, rawValue) => {
+    const newValue = Number(rawValue);
+
+    if (rawValue === '' || rawValue === null || Number.isNaN(newValue)) {
+      setConfig(prev => ({ ...prev, [key]: savedConfig.current[key] }));
+      return;
+    }
+
+    if (newValue === Number(savedConfig.current[key])) {
+      setConfig(prev => ({ ...prev, [key]: newValue }));
+      return;
+    }
+
+    savedConfig.current = { ...savedConfig.current, [key]: newValue };
     setConfig(prev => ({ ...prev, [key]: newValue }));
 
     // Turn off dryer when any setting is changed
@@ -128,7 +151,7 @@ export default function SettingsDialog({
       .catch(err => console.error("Error turning off dryer:", err));
 
     api.setConfiguration(key, newValue)
-      .then(() => api.reloadConfigurations())
+      .then(() => api.applyConfigurations())
       .catch(() => {
         setSaveError(`Failed to save "${key}".`);
       });
@@ -251,7 +274,11 @@ export default function SettingsDialog({
                         label={label}
                         type="number"
                         value={value}
-                        onChange={e => !isKiosk && handleConfigChange(key, e.target.value)}
+                        onChange={e => !isKiosk && handleConfigInput(key, e.target.value)}
+                        onBlur={e => !isKiosk && commitConfigChange(key, e.target.value)}
+                        onKeyDown={e => {
+                          if (!isKiosk && e.key === 'Enter') e.target.blur();
+                        }}
                         size="small"
                         fullWidth
                         InputProps={{
@@ -264,7 +291,7 @@ export default function SettingsDialog({
                         }}
                         onPointerDown={isKiosk ? (e) => {
                           e.preventDefault();
-                          openKeyboard(String(value), 'numeric', val => handleConfigChange(key, val));
+                          openKeyboard(String(value), 'numeric', val => commitConfigChange(key, val));
                         } : undefined}
                       />
                     </Grid>

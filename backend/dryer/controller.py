@@ -214,6 +214,10 @@ class DryerController:
     def _open_log(self, date: datetime):
         self.log_file = f"logs/temperature_{date.strftime('%Y-%m-%d')}.csv"
         self._log_date = date.date()
+        try:
+            os.makedirs("logs", exist_ok=True)
+        except Exception as e:
+            print(f"[DryerController] Cannot create logs directory: {e}")
         if not os.path.exists(self.log_file):
             try:
                 with open(self.log_file, "w") as f:
@@ -227,12 +231,15 @@ class DryerController:
             except Exception:
                 pass
 
-    def log(self, timestamp, temperature):
+    def log(self, timestamp: datetime, temperature):
+        # timestamp is a datetime; rotation depends on its .date()
+        if not isinstance(timestamp, datetime):
+            timestamp = datetime.now()
         if timestamp.date() != self._log_date:
             self._open_log(timestamp)
         try:
             with open(self.log_file, "a") as f:
-                f.write(f"{timestamp};{temperature:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
+                f.write(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')};{temperature:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
         except Exception as e:
             print(f"[DryerController] Log error: {e}")
 
@@ -345,6 +352,26 @@ class DryerController:
             return datetime.now(), 0.0, False, False, False
         ts, temp, htr, fan, vlv = self.history[-1]
         return ts, temp, htr, fan, vlv
+
+    def apply_config(self):
+        """Re-read the tunable parameters from config into the running instance.
+
+        Used instead of rebuilding the controller on a config change: rebuilding
+        calls GPIO.cleanup() (leaving the SSRs undefined for a few ms) and drops
+        history and the in-progress session while the background thread is still
+        holding the old instance.
+        """
+        self.heater_on_duration = self.config.get("heater_on_duration", 10, int)
+        self.heater_off_duration = self.config.get("heater_off_duration", 5, int)
+        self.fan_cooldown_duration = self.config.get("fan_cooldown_duration", 120, int)
+        self.purge_time = self.config.get("purge_time", 1, int)
+        self.cycle_time = self.config.get("cycle_time", 60, int)
+
+        set_temp = self.config.get("setpoint", 70, int)
+        self.set_temp = set_temp
+        self.tolerance = set_temp * 0.01
+
+        print("[DryerController] Configuration applied to the running instance.")
 
     def update_setpoint(self, new_temp):
         self.set_temp = new_temp
