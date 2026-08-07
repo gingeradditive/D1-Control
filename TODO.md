@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **Re-render dell'intero albero a 1 Hz**: `setStatus(res.data)` sostituisce sempre
-      l'oggetto, anche quando nulla è cambiato. Su un Pi conta. Confrontare e aggiornare solo
-      sui campi realmente variati.
 - [ ] **86400 richieste HTTP/giorno solo per lo status.** Il proxy nginx ha già la `location
       /ws/` configurata ma non esiste alcun WebSocket lato backend: sostituire il polling con
       un push.

@@ -108,7 +108,12 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
       inFlight = true;
       api.getStatus()
         .then(res => {
-          setStatus(res.data);
+          // setStatus con un nuovo oggetto ogni secondo forza un re-render dell'intero
+          // albero anche quando nulla è cambiato. Confronto col valore precedente e
+          // aggiorno lo state solo se qualche campo è realmente diverso.
+          setStatus(prev =>
+            JSON.stringify(prev) === JSON.stringify(res.data) ? prev : res.data
+          );
           if (onBackendAvailabilityChange) {
             onBackendAvailabilityChange(true);
           }
