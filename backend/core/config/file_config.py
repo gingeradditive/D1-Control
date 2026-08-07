@@ -104,6 +104,19 @@ class FileConfig:
             self._data[key] = normalized
             self._write(self._data)
 
+    def set_many(self, values: dict[str, Any]) -> None:
+        """Aggiorna più chiavi con un solo write+fsync invece di uno per chiave."""
+        with self._lock:
+            changed = False
+            for key, value in values.items():
+                normalized = self._normalize(value)
+                if key in self._data and self._data[key] == normalized:
+                    continue
+                self._data[key] = normalized
+                changed = True
+            if changed:
+                self._write(self._data)
+
     @staticmethod
     def _normalize(value: Any) -> Any:
         """Coerce numeric-looking strings a int/float, cosi il tipo persistito

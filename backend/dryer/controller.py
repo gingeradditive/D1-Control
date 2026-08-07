@@ -390,8 +390,10 @@ class DryerController:
             elapsed = min(elapsed, self._MAX_ELAPSED_HOURS)
             self.total_hours += elapsed
             self.filter_hours += elapsed
-            self.config.set("total_operating_hours", round(self.total_hours, 4))
-            self.config.set("filter_operating_hours", round(self.filter_hours, 4))
+            self.config.set_many({
+                "total_operating_hours": round(self.total_hours, 4),
+                "filter_operating_hours": round(self.filter_hours, 4),
+            })
             self.session_start_time = None
 
     def get_operating_hours(self):
@@ -409,8 +411,10 @@ class DryerController:
             now = time.monotonic()
             if now - self._hours_save_timer >= 300:
                 elapsed = min((now - self.session_start_time) / 3600.0, self._MAX_ELAPSED_HOURS)
-                self.config.set("total_operating_hours", round(self.total_hours + elapsed, 4))
-                self.config.set("filter_operating_hours", round(self.filter_hours + elapsed, 4))
+                self.config.set_many({
+                    "total_operating_hours": round(self.total_hours + elapsed, 4),
+                    "filter_operating_hours": round(self.filter_hours + elapsed, 4),
+                })
                 self._hours_save_timer = now
 
     def reset_filter_hours(self):

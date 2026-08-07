@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **`periodic_save_hours` fa due `set()`**
-      ([controller.py:262-269](backend/dryer/controller.py#L262-L269)) = due cicli
-      read+write+fsync ogni 5 minuti dove ne basta uno.
 - [ ] **`get_history_data` è O(n × finestre).** Scansiona tutti i 43200 punti una volta per
       ciascuna delle 60 finestre ([controller.py:309-334](backend/dryer/controller.py#L309-L334)).
       In modalità `1m` il ChartDialog la chiama **ogni secondo**. La deque è ordinata: usare
