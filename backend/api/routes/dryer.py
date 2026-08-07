@@ -23,7 +23,7 @@ def get_status():
         "fan": fan,
         "status": dryer.dryer_status,
         "valve": valve,
-        "errors": dryer.errors,
+        "errors": dryer.errors.snapshot(),
         "sensor_fault": dryer.sensor_fault,
         "drying_elapsed_seconds": elapsed,
     }

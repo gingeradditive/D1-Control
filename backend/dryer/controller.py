@@ -10,6 +10,7 @@ from backend.dryer.components.heater import Heater
 from backend.dryer.components.fan import Fan
 from backend.dryer.components.valve import Valve
 from backend.dryer.components.sensors import Sensors
+from backend.core.errors import ErrorRegistry
 
 # Sensor validity range — outside these bounds the reading is treated as a fault.
 # The MAX6675 returns 9999.0 on open-thermocouple; 0.0 on a shorted/disconnected probe.
@@ -62,7 +63,8 @@ class DryerController:
         self.session_start_time = None
         self._hours_save_timer = time.monotonic()
 
-        self.errors = {}
+        # registro errori limitato (TTL + tetto massimo): vedi backend/core/errors.py
+        self.errors = ErrorRegistry()
 
         # sensor fault tracking
         self.sensor_fault = False
@@ -149,9 +151,7 @@ class DryerController:
             now, temperature = self.sensors.read_all()
         except Exception as e:
             print(f"Sensor read error: {e}", file=sys.stderr)
-            error_key = str(e)
-            if error_key not in self.errors:
-                self.errors[error_key] = now.isoformat()
+            self.errors.record(str(e), when=now)
 
         valid = temperature is not None and self._is_temp_valid(temperature)
 
@@ -186,8 +186,8 @@ class DryerController:
         if not self.sensor_fault and self._sensor_bad_streak >= _FAULT_TRIP_COUNT:
             self.sensor_fault = True
             self.sensor_fault_desc = fault_desc
-            # stessa convenzione degli altri errori: chiave = descrizione, valore = data ISO
-            self.errors[fault_desc] = now.isoformat()
+            # sticky: il fault resta finché read_sensor non lo revoca esplicitamente
+            self.errors.record(fault_desc, sticky=True, when=now)
             print(f"[DryerController] SENSOR FAULT: {fault_desc}", file=sys.stderr)
             if self.dryer_status:
                 print("[DryerController] Emergency stop triggered by sensor fault.", file=sys.stderr)

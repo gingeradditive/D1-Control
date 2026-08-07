@@ -20,7 +20,6 @@ import socket
 import sys
 import threading
 import time
-from datetime import datetime
 
 # Età massima del battito del loop prima di considerarlo fermo.
 # Il loop gira a 1 Hz: 5 s sono 5 iterazioni mancate.
@@ -108,7 +107,7 @@ class ControlLoopWatchdog(threading.Thread):
             return
 
         self.tripped = True
-        dryer.errors[_ERROR_KEY] = datetime.now().isoformat()
+        dryer.errors.record(_ERROR_KEY, sticky=True)
         print(
             f"[watchdog] LOOP FERMO da {age:.1f}s — riscaldatore spento d'ufficio.",
             file=sys.stderr,

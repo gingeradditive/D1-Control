@@ -31,9 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **`self.errors` cresce senza limite**: una chiave per ogni stringa di eccezione
-      distinta, mai ripulita (salvo `sensor_fault`), e viene serializzata ad ogni
-      `GET /status`, cioè **una volta al secondo**.
 - [ ] **`GET /api/config/{key}` scrive nel file di configurazione.**
       [config.py:62-63](backend/api/routes/config.py#L62-L63) chiama `config.get(key, None)`
       e [file_config.py:69-73](backend/core/config/file_config.py#L69-L73) **persiste** la
