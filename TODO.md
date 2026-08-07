@@ -14,7 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Nessuna CI** che almeno importi il backend e builda il frontend su PR.
 - [ ] **Stato "acceso" non persistente**: dopo un riavvio imprevisto il dryer resta spento senza
       alcuna segnalazione all'operatore che il ciclo è stato interrotto.
 - [ ] **Messaggi misti italiano/inglese** in log e UI (`"Setpoint aggiornato a"` accanto a

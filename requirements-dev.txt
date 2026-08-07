@@ -1,2 +1,3 @@
--r requirements.txt
-pytest==8.4.2
+# Sviluppo su desktop (non Raspberry Pi): vedi requirements-ci.txt per il perché
+# dell'esclusione dei pacchetti hardware.
+-r requirements-ci.txt
