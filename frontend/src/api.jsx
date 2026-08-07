@@ -12,6 +12,8 @@ const apiClient = axios.create({
   },
 });
 
+export const STATUS_WS_URL = `${BASE_URL.replace(/^http/, "ws")}/ws/status`;
+
 export const api = {
   // --- Dryer ---
   getStatus: () => apiClient.get("/api/dryer/status"),

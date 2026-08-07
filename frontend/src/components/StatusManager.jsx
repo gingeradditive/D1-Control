@@ -3,7 +3,7 @@ import { Box, IconButton } from '@mui/material';
 import TemperatureDisplay from './TemperatureDisplay';
 import Controls from './Controls';
 import Footer from './Footer';
-import { api } from '../api';
+import { api, STATUS_WS_URL } from '../api';
 import ScreensaverOverlay from './ScreensaverOverlay';
 import { useSnackbar } from 'notistack';
 import CloseIcon from '@mui/icons-material/Close';
@@ -100,36 +100,97 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
     fetchTimeout();
   }, []);
 
-  // Fetch status regolarmente
+  // Stato via WebSocket: nginx ha già /ws/ configurato, e il backend spinge
+  // un aggiornamento solo quando qualcosa cambia. Sostituisce gli 86400
+  // polling HTTP/giorno di prima (1 req/s) con un'unica connessione persistente.
+  // Se il WebSocket non è disponibile (rete/proxy che lo blocca), si torna al
+  // polling HTTP come fallback.
   useEffect(() => {
-    let inFlight = false;
-    const interval = setInterval(() => {
-      if (inFlight) return;
-      inFlight = true;
-      api.getStatus()
-        .then(res => {
-          // setStatus con un nuovo oggetto ogni secondo forza un re-render dell'intero
-          // albero anche quando nulla è cambiato. Confronto col valore precedente e
-          // aggiorno lo state solo se qualche campo è realmente diverso.
-          setStatus(prev =>
-            JSON.stringify(prev) === JSON.stringify(res.data) ? prev : res.data
-          );
-          if (onBackendAvailabilityChange) {
-            onBackendAvailabilityChange(true);
-          }
-        })
-        .catch(err => {
-          console.error("Errore nel fetch /status:", err);
-          if (onBackendAvailabilityChange) {
-            onBackendAvailabilityChange(false);
-          }
-        })
-        .finally(() => {
-          inFlight = false;
-        });
-    }, 1000);
+    let cancelled = false;
+    let ws = null;
+    let reconnectTimer = null;
+    let pollInterval = null;
+    let pollInFlight = false;
+    let everConnected = false;
 
-    return () => clearInterval(interval);
+    const applyStatus = (data) => {
+      setStatus(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data));
+    };
+
+    const startPolling = () => {
+      if (pollInterval) return;
+      pollInterval = setInterval(() => {
+        if (pollInFlight) return;
+        pollInFlight = true;
+        api.getStatus()
+          .then(res => {
+            applyStatus(res.data);
+            onBackendAvailabilityChange?.(true);
+          })
+          .catch(err => {
+            console.error("Errore nel fetch /status:", err);
+            onBackendAvailabilityChange?.(false);
+          })
+          .finally(() => {
+            pollInFlight = false;
+          });
+      }, 1000);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    const connect = () => {
+      if (cancelled) return;
+      ws = new WebSocket(STATUS_WS_URL);
+
+      ws.onopen = () => {
+        everConnected = true;
+        stopPolling();
+        onBackendAvailabilityChange?.(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          applyStatus(JSON.parse(event.data));
+          onBackendAvailabilityChange?.(true);
+        } catch (err) {
+          console.error("Errore nel parsing del messaggio /ws/status:", err);
+        }
+      };
+
+      ws.onerror = () => {
+        // onclose viene comunque emesso dopo onerror: la riconnessione/fallback
+        // avviene lì per evitare doppia gestione.
+      };
+
+      ws.onclose = () => {
+        if (cancelled) return;
+        onBackendAvailabilityChange?.(false);
+        // Se non si è mai connesso (proxy/rete che blocca i WebSocket), niente
+        // retry a raffica: si passa al polling HTTP come fallback stabile.
+        if (!everConnected) {
+          startPolling();
+        }
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+        ws.close();
+      }
+    };
   }, [onBackendAvailabilityChange]);
 
   // Controllo aggiornamenti

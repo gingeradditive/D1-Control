@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **86400 richieste HTTP/giorno solo per lo status.** Il proxy nginx ha già la `location
-      /ws/` configurata ma non esiste alcun WebSocket lato backend: sostituire il polling con
-      un push.
 - [ ] **Dipendenze morte da rimuovere** (tempo di `npm install` e build sul Pi):
       `chart.js`, `react-chartjs-2`, `react-simple-keyboard`, `simple-keyboard-layouts` in
       [frontend/package.json](frontend/package.json) — l'unico grafico usa `recharts` e la
