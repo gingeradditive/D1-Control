@@ -424,6 +424,13 @@ xset s noblank
 unclutter -idle 0 &
 
 # Avvia Chromium in modalità kiosk
+# --disable-gpu: workaround per l'accelerazione VideoCore su Raspberry Pi OS,
+# nota per andare in crash o restare con schermo nero in modalità kiosk quando
+# l'accelerazione GPU di Chromium è attiva (driver Mesa/V3D non completamente
+# supportato). Va tenuto insieme a --disable-software-rasterizer: senza
+# accelerazione GPU, SwiftShader (il rasterizzatore software di fallback)
+# consumerebbe CPU/RAM inutili su un dispositivo già limitato (1.7GB RAM).
+# Costa fluidità alle animazioni ma evita crash/schermo nero sull'hardware target.
 chromium \\
   --noerrdialogs \\
   --disable-infobars \\

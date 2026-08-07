@@ -14,6 +14,4 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **Chromium avviato con `--disable-gpu`** ([install.sh:389](scripts/install.sh#L389)):
-      se è un workaround per un bug specifico va documentato, altrimenti costa fluidità alle
-      animazioni del display.
+Nessun punto aperto: tutti gli item dell'audit del 2026-08-07 sono stati risolti.
