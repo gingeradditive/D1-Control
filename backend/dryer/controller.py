@@ -35,7 +35,10 @@ class DryerController:
         # setpoint
         set_temp = self.config.get("setpoint", 70, int)
         self.set_temp = set_temp
-        self.tolerance = set_temp * 0.01
+        # Isteresi assoluta (°C), non proporzionale al setpoint: allo 0.5% del
+        # MAX6675 (risoluzione 0.25 °C) un'isteresi relativa cicla sul rumore
+        # del sensore a bassi setpoint.
+        self.tolerance = self.config.get("heater_hysteresis", 1.5, float)
 
         # fan cooldown
         self.fan_cooldown_duration = self.config.get("fan_cooldown_duration", 120, int)
@@ -388,13 +391,12 @@ class DryerController:
 
         set_temp = self.config.get("setpoint", 70, int)
         self.set_temp = set_temp
-        self.tolerance = set_temp * 0.01
+        self.tolerance = self.config.get("heater_hysteresis", 1.5, float)
 
         print("[DryerController] Configuration applied to the running instance.")
 
     def update_setpoint(self, new_temp):
         self.set_temp = new_temp
-        self.tolerance = new_temp * 0.01
         self.config.set("setpoint", new_temp)
         print(f"Setpoint aggiornato a {new_temp}°C")
 

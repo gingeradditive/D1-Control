@@ -12,6 +12,7 @@ DEFAULT_CONFIG = {
     "heater_off_duration": 5,
     "setpoint": 70,
     "fan_cooldown_duration": 120,
+    "heater_hysteresis": 1.5,
     "purge_time": 1,
     "cycle_time": 60,
     "inactivity_timeout": 5,

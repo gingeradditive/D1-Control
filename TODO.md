@@ -12,15 +12,8 @@ Legenda priorità:
 
 ---
 
-
----
-
 ## 🟡 Migliorie
 
-- [ ] **Isteresi troppo stretta.** `tolerance = setpoint * 1%`
-      ([controller.py:37](backend/dryer/controller.py#L37)): a 50 °C sono 0.5 °C, cioè due LSB
-      del MAX6675 (risoluzione 0.25 °C). Il riscaldatore ciclerà sul rumore. Usare
-      un'isteresi assoluta configurabile (es. 1.5 °C).
 - [ ] **Nessun rilevamento "riscalda ma non sale".** Se la termocoppia si sfila dal blocco, se
       l'SSR si guasta aperto o se la resistenza si brucia, il sistema resta acceso all'infinito
       senza accorgersene. Aggiungere un check sulla derivata: riscaldatore ON per N minuti con
