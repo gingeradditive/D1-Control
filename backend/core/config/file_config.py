@@ -86,8 +86,22 @@ class FileConfig:
 
     def set(self, key: str, value: Any) -> None:
         data = self._read()
-        data[key] = value
+        data[key] = self._normalize(value)
         self._write(data)
+
+    @staticmethod
+    def _normalize(value: Any) -> Any:
+        """Coerce numeric-looking strings a int/float, cosi il tipo persistito
+        non dipende da come il chiamante ha ottenuto il valore (es. form data)."""
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                try:
+                    return float(value)
+                except ValueError:
+                    pass
+        return value
 
     def all(self) -> dict[str, Any]:
         return self._read()

@@ -31,9 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **Tipi misti in config.json in produzione**: `purge_time: "1"`, `cycle_time: "60"`,
-      `inactivity_timeout: "5"` sono stringhe, gli altri numeri. `FileConfig` non normalizza
-      i tipi in scrittura.
 - [ ] **`/api/config/reload` è una GET con effetti distruttivi** (spegne il dryer e ricrea i
       controller). Deve essere una POST.
 - [ ] **Il factory reset non ricarica il controller**: `config.reset()`

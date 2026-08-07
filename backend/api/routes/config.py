@@ -11,14 +11,7 @@ def get_all_config():
 
 @router.post("/set")
 def set_config(key: str = Form(...), value: str = Form(...)):
-    try:
-        parsed = int(value)
-    except ValueError:
-        try:
-            parsed = float(value)
-        except ValueError:
-            parsed = value
-    config.set(key, parsed)
+    config.set(key, value)
     return {"status": "Success", "message": "Configuration updated"}
 
 @router.post("/apply")
