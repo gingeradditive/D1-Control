@@ -76,4 +76,4 @@ def factory_reset():
 
 @router.get("/{key}")
 def get(key: str):
-    return config.get(key, None)
+    return config.all().get(key)

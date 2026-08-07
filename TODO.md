@@ -31,9 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **`GET /api/config/{key}`: cast a `str` di default** → `getConfiguration("inactivity_timeout")`
-      restituisce `"5"` (stringa JSON), non `5`. La UI funziona solo per coercizione
-      implicita ([StatusManager.jsx:215](frontend/src/components/StatusManager.jsx#L215)).
 - [ ] **Tipi misti in config.json in produzione**: `purge_time: "1"`, `cycle_time: "60"`,
       `inactivity_timeout: "5"` sono stringhe, gli altri numeri. `FileConfig` non normalizza
       i tipi in scrittura.
