@@ -18,6 +18,8 @@ typing_extensions==4.14.1
 
 # HTTP client
 requests==2.32.4
+httpx==0.28.1
+httpcore==1.0.7
 certifi==2025.7.14
 charset-normalizer==3.4.2
 idna==3.10

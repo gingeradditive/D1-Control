@@ -16,7 +16,6 @@ Legenda priorità:
 
 ### Installazione / sistema
 
-- [ ] **`reverse_proxy.py` importa `httpx`, assente da `requirements.txt`.**
 - [ ] **`import board` in [scanner.py](backend/network/scanner.py)**: import inutilizzato di
       Adafruit Blinka, **non dichiarato in `requirements.txt`**. Oggi funziona solo perché il
       pacchetto è presente nell'immagine `mainsailos` di base (verificato: lo scan restituisce
