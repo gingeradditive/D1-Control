@@ -16,11 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **Closure stale sullo screensaver.** `resetTimer`
-      ([StatusManager.jsx:200-224](frontend/src/components/StatusManager.jsx#L200-L224)) è
-      catturato dall'effect con deps `[inactivityTimeout, isKiosk]` e vede sempre
-      `isScreensaverActive === false`: gli eventi globali non lo chiudono, funziona solo il
-      tap sull'overlay.
 - [ ] **Il check aggiornamenti gira solo al mount**
       ([StatusManager.jsx:125-156](frontend/src/components/StatusManager.jsx#L125-L156)). In
       kiosk la pagina non si ricarica mai → un aggiornamento pubblicato dopo il boot non viene

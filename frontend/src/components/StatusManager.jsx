@@ -196,12 +196,12 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
     return () => clearInterval(interval);
   }, [enqueueSnackbar, closeSnackbar]);
 
-  // Event handler per interazione utente
+  // Event handler per interazione utente. Aggiorna sempre lo stato invece di
+  // leggere isScreensaverActive da una closure che l'effect sotto non ricrea
+  // quando lo screensaver si attiva: la condizione sarebbe rimasta stale.
   const resetTimer = () => {
     lastInteractionTime.current = Date.now();
-    if (isScreensaverActive) {
-      setIsScreensaverActive(false);
-    }
+    setIsScreensaverActive(false);
   };
 
   // Gestione inattività
