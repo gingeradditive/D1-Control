@@ -1,5 +1,7 @@
+import asyncio
 import httpx
-from fastapi import FastAPI, Request
+import websockets
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,6 +17,41 @@ app.add_middleware(
 
 FRONTEND = "http://localhost:5173"
 BACKEND = "http://localhost:8000"
+BACKEND_WS = "ws://localhost:8000"
+
+# ===================== WEBSOCKET =====================
+@app.websocket("/ws/{path:path}")
+async def proxy_ws(websocket: WebSocket, path: str):
+    await websocket.accept()
+    url = f"{BACKEND_WS}/ws/{path}"
+    try:
+        async with websockets.connect(url) as backend_ws:
+            async def client_to_backend():
+                try:
+                    while True:
+                        data = await websocket.receive_text()
+                        await backend_ws.send(data)
+                except WebSocketDisconnect:
+                    pass
+
+            async def backend_to_client():
+                async for message in backend_ws:
+                    await websocket.send_text(message)
+
+            client_task = asyncio.ensure_future(client_to_backend())
+            backend_task = asyncio.ensure_future(backend_to_client())
+            done, pending = await asyncio.wait(
+                [client_task, backend_task], return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in pending:
+                task.cancel()
+    except Exception:
+        pass
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 # ===================== API =====================
 @app.api_route("/api/{path:path}", methods=["GET","POST","PUT","PATCH","DELETE"])

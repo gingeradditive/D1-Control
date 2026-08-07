@@ -8,6 +8,7 @@ uvicorn==0.35.0
 uvloop==0.21.0
 httptools==0.6.4
 h11==0.16.0
+websockets==15.0.1
 
 # Pydantic
 pydantic==2.11.7
