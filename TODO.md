@@ -14,11 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **Dipendenze morte da rimuovere** (tempo di `npm install` e build sul Pi):
-      `chart.js`, `react-chartjs-2`, `react-simple-keyboard`, `simple-keyboard-layouts` in
-      [frontend/package.json](frontend/package.json) — l'unico grafico usa `recharts` e la
-      tastiera è stata riscritta in `c8c6268`. Anche il
-      [package.json](package.json) di root esiste solo per una dipendenza `notistack` inutile.
 - [ ] **Nessun code splitting**: tutti i dialog (Settings, Stats, Presets, Chart, Wifi) sono nel
       bundle iniziale. `React.lazy` su ciascuno.
 - [ ] **Chromium avviato con `--disable-gpu`** ([install.sh:389](scripts/install.sh#L389)):
