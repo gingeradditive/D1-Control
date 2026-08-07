@@ -28,20 +28,22 @@ class FileConfig:
         # Se non esiste, crea il file con i valori di default
         if not os.path.exists(self.path):
             self._write(self.defaults)
+        else:
+            self._migrate()
+
+    def _migrate(self) -> None:
+        """Integra una sola volta, all'avvio, le chiavi di default mancanti.
+        Fuori da qui il file viene scritto solo su set()/reset()."""
+        data = self._read()
+        missing = {k: v for k, v in self.defaults.items() if k not in data}
+        if missing:
+            data.update(missing)
+            self._write(data)
 
     def _read(self) -> dict[str, Any]:
         try:
             with open(self.path, "r") as f:
-                data = json.load(f)
-            # Integra eventuali chiavi mancanti con i default
-            updated = False
-            for key, val in self.defaults.items():
-                if key not in data:
-                    data[key] = val
-                    updated = True
-            if updated:
-                self._write(data)
-            return data
+                return json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             self._write(self.defaults)
             return dict(self.defaults)
@@ -68,12 +70,14 @@ class FileConfig:
                     pass
 
     def get(self, key: str, default: T, cast_type: Type[T] = str) -> T:
+        """Legge una chiave. Non modifica mai il file: una chiave assente
+        ritorna il default senza essere persistita."""
         data = self._read()
         if key not in data:
-            data[key] = default
-            self._write(data)
             return default
         value = data[key]
+        if value is None:
+            return default
         try:
             return cast_type(value)
         except (ValueError, TypeError):

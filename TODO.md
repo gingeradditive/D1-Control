@@ -31,12 +31,7 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **`GET /api/config/{key}` scrive nel file di configurazione.**
-      [config.py:62-63](backend/api/routes/config.py#L62-L63) chiama `config.get(key, None)`
-      e [file_config.py:69-73](backend/core/config/file_config.py#L69-L73) **persiste** la
-      chiave mancante con valore `null`. Verificato in produzione: `config.json` contiene
-      `"timezone": null`. Un endpoint di lettura non deve mutare lo stato.
-- [ ] **Stesso endpoint: cast a `str` di default** → `getConfiguration("inactivity_timeout")`
+- [ ] **`GET /api/config/{key}`: cast a `str` di default** → `getConfiguration("inactivity_timeout")`
       restituisce `"5"` (stringa JSON), non `5`. La UI funziona solo per coercizione
       implicita ([StatusManager.jsx:215](frontend/src/components/StatusManager.jsx#L215)).
 - [ ] **Tipi misti in config.json in produzione**: `purge_time: "1"`, `cycle_time: "60"`,
