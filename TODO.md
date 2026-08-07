@@ -14,17 +14,7 @@ Legenda priorità:
 
 ## 🔴 Critici
 
-### 1. Un guasto sensore produce lo stesso sintomo del bug appena risolto
-
-[controller.py:177-179](backend/dryer/controller.py#L177-L179): in caso di lettura non
-valida, `read_sensor()` ritorna l'ultima lettura buona **senza appenderla alla history**.
-Il display mostra quindi un numero fermo che sembra valido. È un secondo percorso verso
-"la temperatura non cambia", indistinguibile dal primo per l'operatore.
-
-**Fix**: quando `sensor_fault` è attivo, `/status` deve restituire `current_temp: null` e la
-UI mostrare `--`. Il valore di fallback resta interno a `update_heater`.
-
-### 2. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
+### 1. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
 
 Il backend ascolta su `0.0.0.0:8000` (oltre a nginx su :80) senza alcuna autenticazione, ed
 espone `POST /api/update/apply` (git pull + reboot), `POST /api/config/reset`,

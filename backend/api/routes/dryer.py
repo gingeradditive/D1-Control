@@ -12,9 +12,13 @@ def get_status():
     elapsed = 0
     if dryer.dryer_status and dryer.session_start_time is not None:
         elapsed = int(time.monotonic() - dryer.session_start_time)
+    # Con un fault sensore il valore in memoria è l'ultima lettura buona, tenuta
+    # solo per far lavorare update_heater in sicurezza. Esporla mostrerebbe un
+    # numero fermo che sembra valido: meglio nessun valore, la UI mostra "--".
+    current_temp = None if dryer.sensor_fault or temp is None else round(temp)
     return {
         "setpoint": dryer.set_temp,
-        "current_temp": round(temp),
+        "current_temp": current_temp,
         "heater": heater,
         "fan": fan,
         "status": dryer.dryer_status,
