@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`Fan.on()` non fa il setup difensivo** che fa `Heater.on()`
-      ([fan.py:19](backend/dryer/components/fan.py#L19) vs
-      [heater.py:19-30](backend/dryer/components/heater.py#L19-L30)). Se la ventola merita
-      meno protezione del riscaldatore va detto in un commento, altrimenti va allineata.
 - [ ] **`Valve._set_angle` lascia un `threading.Timer` per ogni movimento** e non lo traccia:
       a `shutdown()` può ancora scattare su un `pi` già chiuso.
 - [ ] **`forget()` spezza male l'output nmcli**: `conn.split(":", 1)`
