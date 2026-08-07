@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Il MAX6675 non logga mai il raw in caso di anomalia**
-      ([sensors.py:38-43](backend/dryer/components/sensors.py#L38-L43)). Con i due byte grezzi
-      a disposizione questo bug si sarebbe diagnosticato in un minuto.
 - [ ] **La `history` vive solo in RAM** (43200 punti,
       [controller.py:48](backend/dryer/controller.py#L48)) e si perde ad ogni riavvio, benché il
       CSV giornaliero esista già su disco e non venga mai riletto.
