@@ -47,8 +47,8 @@ def _can_escape_cgroup(user: str) -> bool:
             _scope_available = probe.returncode == 0
             if not _scope_available:
                 logger.warning(
-                    "systemd-run non utilizzabile (%s): l'update girerà nel cgroup "
-                    "del servizio e potrebbe essere ucciso dall'OOM killer",
+                    "systemd-run not usable (%s): the update will run in the "
+                    "service's cgroup and may be killed by the OOM killer",
                     probe.stderr.strip() or f"rc={probe.returncode}",
                 )
     return _scope_available
@@ -96,7 +96,7 @@ def run_command(command: str, cwd: Path = None, timeout: int = 300, env: dict = 
 def reboot_device():
     """Riavvia il Raspberry (o salta in ambiente non-RPi)"""
     if IS_RASPBERRY:
-        logger.info("Riavvio del Raspberry Pi...")
+        logger.info("Rebooting the Raspberry Pi...")
         run_command("sudo reboot")
     else:
         logger.info("[DEBUG] Reboot skipped (non-Raspberry environment)")

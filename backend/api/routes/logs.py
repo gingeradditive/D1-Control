@@ -20,11 +20,11 @@ def get_logs(lines: int = Query(default=200, ge=1, le=MAX_LINES)):
             capture_output=True, text=True, timeout=10,
         )
     except FileNotFoundError:
-        raise HTTPException(status_code=501, detail="journalctl non disponibile su questo sistema")
+        raise HTTPException(status_code=501, detail="journalctl not available on this system")
     except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="journalctl non ha risposto in tempo")
+        raise HTTPException(status_code=504, detail="journalctl did not respond in time")
 
     if result.returncode != 0:
-        raise HTTPException(status_code=500, detail=result.stderr.strip() or "journalctl fallito")
+        raise HTTPException(status_code=500, detail=result.stderr.strip() or "journalctl failed")
 
     return {"lines": result.stdout.splitlines()}

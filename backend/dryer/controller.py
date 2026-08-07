@@ -99,7 +99,7 @@ class DryerController:
         # avvisa l'operatore invece di ripartire spento in silenzio.
         if self.config.get("was_running", False, bool):
             self.errors.record(_UNEXPECTED_RESTART_KEY, sticky=True)
-            print("[DryerController] Sessione precedente interrotta da un riavvio imprevisto.")
+            print("[DryerController] Previous session was interrupted by an unexpected restart.")
 
         # rilevamento "riscalda ma non sale": vedi _HEAT_STALL_* sotto
         self._heat_stall_baseline = None
@@ -163,7 +163,7 @@ class DryerController:
             loaded += 1
 
         if loaded:
-            print(f"[DryerController] Ripopolati {loaded} punti di history da {log_file}")
+            print(f"[DryerController] Reloaded {loaded} history points from {log_file}")
 
     # --- deadman heartbeat ---
     def heartbeat(self):
@@ -514,7 +514,7 @@ class DryerController:
     def update_setpoint(self, new_temp):
         self.set_temp = new_temp
         self.config.set("setpoint", new_temp)
-        print(f"Setpoint aggiornato a {new_temp}°C")
+        print(f"Setpoint updated to {new_temp}°C")
 
     def update_fan_cooldown(self):
         if self.cooldown_active and not self.dryer_status and self.fan_cooldown_end:

@@ -46,7 +46,7 @@ def sd_notify(state: str) -> bool:
             sock.sendall(state.encode())
         return True
     except OSError as e:
-        print(f"[watchdog] sd_notify fallita: {e}", file=sys.stderr)
+        print(f"[watchdog] sd_notify failed: {e}", file=sys.stderr)
         return False
 
 
@@ -77,7 +77,7 @@ class ControlLoopWatchdog(threading.Thread):
                 self._check()
             except Exception as e:
                 # Il watchdog non può morire: è l'ultima rete di sicurezza.
-                print(f"[watchdog] Errore nel controllo: {e}", file=sys.stderr)
+                print(f"[watchdog] Error during check: {e}", file=sys.stderr)
             time.sleep(CHECK_INTERVAL)
 
     def _check(self):
@@ -91,7 +91,7 @@ class ControlLoopWatchdog(threading.Thread):
         if self.tripped:
             self.tripped = False
             dryer.errors.pop(_ERROR_KEY, None)
-            print("[watchdog] Loop di controllo ripartito.")
+            print("[watchdog] Control loop is running again.")
 
         self._ping_systemd()
 
@@ -101,7 +101,7 @@ class ControlLoopWatchdog(threading.Thread):
         try:
             dryer.heater.off()
         except Exception as e:
-            print(f"[watchdog] Impossibile spegnere il riscaldatore: {e}", file=sys.stderr)
+            print(f"[watchdog] Unable to turn off the heater: {e}", file=sys.stderr)
 
         if self.tripped:
             return
@@ -109,7 +109,7 @@ class ControlLoopWatchdog(threading.Thread):
         self.tripped = True
         dryer.errors.record(_ERROR_KEY, sticky=True)
         print(
-            f"[watchdog] LOOP FERMO da {age:.1f}s — riscaldatore spento d'ufficio.",
+            f"[watchdog] LOOP STALLED for {age:.1f}s — heater forced off.",
             file=sys.stderr,
         )
         # Da qui in poi smettiamo di pingare systemd: se la situazione non si
@@ -117,7 +117,7 @@ class ControlLoopWatchdog(threading.Thread):
         try:
             dryer.stop()
         except Exception as e:
-            print(f"[watchdog] stop() fallita: {e}", file=sys.stderr)
+            print(f"[watchdog] stop() failed: {e}", file=sys.stderr)
 
     def _ping_systemd(self):
         if not self._ping_interval:

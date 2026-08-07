@@ -18,19 +18,19 @@ class UpdateController:
         steps_completed = []
 
         try:
-            logger.info("Eseguo git pull...")
+            logger.info("Running git pull...")
             output = git_pull(self.project_path)
             steps_completed.append("git_pull")
 
             if "Already up to date." in output or "Già aggiornato" in output:
-                logger.info("Nessun aggiornamento trovato.")
+                logger.info("No update found.")
                 return {"updateApplied": False, "message": "Already up to date.", "steps": steps_completed}
 
-            logger.info("Aggiorno dipendenze backend...")
+            logger.info("Updating backend dependencies...")
             install_backend_dependencies(self.project_path)
             steps_completed.append("backend_deps")
 
-            logger.info("Ricostruisco il frontend...")
+            logger.info("Rebuilding frontend...")
             build_frontend(self.project_path)
             steps_completed.append("frontend_build")
 
@@ -42,7 +42,7 @@ class UpdateController:
 
     def schedule_reboot(self):
         """Riavvia il dispositivo — da chiamare dopo aver inviato la risposta HTTP"""
-        logger.info("Riavvio programmato in corso...")
+        logger.info("Scheduled reboot in progress...")
         reboot_device()
 
     def get_current_version(self) -> dict:

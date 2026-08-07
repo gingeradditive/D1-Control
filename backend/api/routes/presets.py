@@ -76,7 +76,7 @@ def _write_user_presets(presets: list[dict]) -> None:
             tmp_path = tmp.name
         os.replace(tmp_path, PRESETS_FILE)
     except Exception as e:
-        print(f"[Presets] Errore nel salvare {PRESETS_FILE}: {e}")
+        print(f"[Presets] Error saving {PRESETS_FILE}: {e}")
         if tmp_path:
             try:
                 os.unlink(tmp_path)

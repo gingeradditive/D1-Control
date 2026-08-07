@@ -29,10 +29,10 @@ def get_networks():
 
             return [{"ssid": ssid, "strength": signal} for ssid, signal in network_map.items()]
         except Exception as e:
-            print(f"[Network] Errore nel recupero reti Wi-Fi: {e}")
+            print(f"[Network] Error retrieving Wi-Fi networks: {e}")
             return []
     else:
-        print("[Network] Simulazione: scansione Wi-Fi lenta (10s)...")
+        print("[Network] Simulation: slow Wi-Fi scan (10s)...")
         time.sleep(10)
         return [
             {"ssid": "Home_WiFi", "strength": 65},

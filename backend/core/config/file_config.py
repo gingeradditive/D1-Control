@@ -53,7 +53,7 @@ class FileConfig:
             self._write(self.defaults)
             return dict(self.defaults)
         except Exception as e:
-            print(f"[Config] Errore nel leggere {self.path}: {e}")
+            print(f"[Config] Error reading {self.path}: {e}")
             return dict(self.defaults)
 
     def _write(self, data: dict[str, Any]) -> None:
@@ -67,7 +67,7 @@ class FileConfig:
                 tmp_path = tmp.name
             os.replace(tmp_path, self.path)
         except Exception as e:
-            print(f"[Config] Errore nel salvare {self.path}: {e}")
+            print(f"[Config] Error saving {self.path}: {e}")
             if tmp_path:
                 try:
                     os.unlink(tmp_path)
@@ -86,7 +86,7 @@ class FileConfig:
         try:
             return cast_type(value)
         except (ValueError, TypeError):
-            print(f"[Config] Conversione fallita per {key}, ritorno default: {default}")
+            print(f"[Config] Conversion failed for {key}, returning default: {default}")
             return default
 
     def set(self, key: str, value: Any) -> None:
@@ -119,6 +119,6 @@ class FileConfig:
                 if os.path.exists(self.path):
                     os.remove(self.path)
                 self._write(self.defaults)
-            print(f"[Config] {self.path} è stato resettato ai valori di default.")
+            print(f"[Config] {self.path} was reset to default values.")
         except Exception as e:
-            print(f"[Config] Errore nel reset del file {self.path}: {e}")
+            print(f"[Config] Error resetting file {self.path}: {e}")

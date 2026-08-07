@@ -11,7 +11,7 @@ class SystemConfig:
             )
             return [tz for tz in result.stdout.split() if tz]
         except Exception as e:
-            print(f"[SystemConfig] Errore nell'elenco timezone: {e}")
+            print(f"[SystemConfig] Error listing timezones: {e}")
             return []
 
     def set_timezone(self, timezone: str) -> bool:
@@ -22,7 +22,7 @@ class SystemConfig:
         """
         known = self.list_timezones()
         if known and timezone not in known:
-            raise RuntimeError(f"Timezone non valida: {timezone}")
+            raise RuntimeError(f"Invalid timezone: {timezone}")
         try:
             subprocess.run(
                 ["sudo", "-n", "timedatectl", "set-timezone", timezone],
@@ -30,18 +30,18 @@ class SystemConfig:
             )
         except subprocess.CalledProcessError as e:
             detail = (e.stderr or "").strip() or f"exit code {e.returncode}"
-            print(f"[SystemConfig] Errore nell'impostare timezone: {detail}")
-            raise RuntimeError(f"timedatectl set-timezone fallito: {detail}") from e
+            print(f"[SystemConfig] Error setting timezone: {detail}")
+            raise RuntimeError(f"timedatectl set-timezone failed: {detail}") from e
         except Exception as e:
-            print(f"[SystemConfig] Errore sconosciuto: {e}")
-            raise RuntimeError(f"Impossibile impostare la timezone: {e}") from e
+            print(f"[SystemConfig] Unknown error: {e}")
+            raise RuntimeError(f"Unable to set timezone: {e}") from e
 
         applied = self.get_timezone()
         if applied != timezone:
             raise RuntimeError(
-                f"Timezone non applicata: richiesta {timezone}, attuale {applied}"
+                f"Timezone not applied: requested {timezone}, current {applied}"
             )
-        print(f"[SystemConfig] Timezone impostato su: {timezone}")
+        print(f"[SystemConfig] Timezone set to: {timezone}")
         return True
 
     def get_timezone(self) -> str:
@@ -52,5 +52,5 @@ class SystemConfig:
             )
             return result.stdout.strip()
         except Exception as e:
-            print(f"[SystemConfig] Errore nel recupero timezone: {e}")
-            return "Sconosciuto"
+            print(f"[SystemConfig] Error retrieving timezone: {e}")
+            return "Unknown"

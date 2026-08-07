@@ -40,7 +40,7 @@ def get_status() -> dict:
 
             return {"connected": connected, "ssid": ssid, "strength": strength, "ip": ip}
         except Exception as e:
-            print(f"[Network] Errore status: {e}")
+            print(f"[Network] Status error: {e}")
             return {"connected": False, "ssid": None, "strength": 0, "ip": "--.--.--.--"}
     else:
         return {"connected": True, "ssid": "Office_Net", "strength": 72, "ip": "192.168.1.1"}

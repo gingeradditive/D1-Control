@@ -52,5 +52,5 @@ def is_update_available(project_path: Path) -> bool:
         remote = run_command("git rev-parse @{u}", cwd=project_path).strip()
         return local != remote
     except RuntimeError as e:
-        logger.warning(f"Impossibile verificare gli aggiornamenti (probabile assenza di rete): {e}")
+        logger.warning(f"Unable to check for updates (likely no network): {e}")
         return False

@@ -20,7 +20,7 @@ _watchdog = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _thread, _running, _watchdog
-    print("[Startup] Avvio ciclo di background del dryer...")
+    print("[Startup] Starting dryer background loop...")
     _thread = Thread(target=background_loop, args=(controllers, lambda: _running))
     _thread.daemon = True
     _thread.start()
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 
     sd_notify("READY=1")
     yield
-    print("[Shutdown] Arresto in corso...")
+    print("[Shutdown] Shutting down...")
     sd_notify("STOPPING=1")
     _running = False
     if _thread:
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     try:
         controllers["dryer"].shutdown()
     except Exception as e:
-        print(f"[Shutdown] Errore in chiusura dryer: {e}")
+        print(f"[Shutdown] Error while shutting down dryer: {e}")
 
 app = FastAPI(title="Dryer Control API", lifespan=lifespan)
 

@@ -14,8 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Messaggi misti italiano/inglese** in log e UI (`"Setpoint aggiornato a"` accanto a
-      `"Heater ON"`). Scegliere una lingua per i log e una per la UI (UTILIZZARE INGLESE)
 - [ ] **`screensaver_delay` è una chiave di config morta**: il codice usa
       `inactivity_timeout`. Rimuoverla dai default.
 - [ ] **Versione = hash di commit** ([SettingsDialog.jsx:325](frontend/src/components/SettingsDialog.jsx#L325)):

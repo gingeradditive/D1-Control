@@ -18,16 +18,16 @@ def connect(ssid: str, password: str) -> bool:
                 capture_output=True, text=True, timeout=30
             )
             if result.returncode == 0:
-                print(f"[Network] Connesso con successo a {ssid}")
+                print(f"[Network] Successfully connected to {ssid}")
                 return True
             else:
-                print(f"[Network] Errore connessione: {result.stderr}")
+                print(f"[Network] Connection error: {result.stderr}")
                 return False
         except Exception as e:
-            print(f"[Network] Eccezione durante connessione: {e}")
+            print(f"[Network] Exception during connection: {e}")
             return False
     else:
-        print(f"[Network] Simulazione: connessione a {ssid}")
+        print(f"[Network] Simulation: connecting to {ssid}")
         time.sleep(2)
         return password == "Success"
 
@@ -42,7 +42,7 @@ def forget() -> bool:
                 capture_output=True, text=True, timeout=10
             )
             if result.returncode != 0:
-                print(f"[Network] Nessuna connessione attiva: {result.stderr}")
+                print(f"[Network] No active connection: {result.stderr}")
                 return False
 
             for conn in result.stdout.strip().split('\n'):
@@ -51,13 +51,13 @@ def forget() -> bool:
                 name, device = conn.rsplit(":", 1)
                 if "wlan" in device:
                     subprocess.run(['nmcli', 'connection', 'delete', name], check=True, timeout=10)
-                    print(f"[Network] Connessione '{name}' dimenticata.")
+                    print(f"[Network] Connection '{name}' forgotten.")
                     return True
-            print("[Network] Nessuna connessione Wi-Fi trovata.")
+            print("[Network] No Wi-Fi connection found.")
             return False
         except Exception as e:
-            print(f"[Network] Errore durante forget: {e}")
+            print(f"[Network] Error during forget: {e}")
             return False
     else:
-        print("[Network] Simulazione: connessione dimenticata.")
+        print("[Network] Simulation: connection forgotten.")
         return True
