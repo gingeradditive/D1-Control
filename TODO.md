@@ -16,9 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`forget()` spezza male l'output nmcli**: `conn.split(":", 1)`
-      ([connection.py](backend/network/connection.py)) assume che il *nome* non contenga `:`.
-      Va usato `rsplit(":", 1)`.
 - [ ] **`subprocess.run` senza `timeout`** in `connect()` e `forget()`
       ([connection.py](backend/network/connection.py)): un nmcli bloccato occupa per sempre
       un worker del threadpool.

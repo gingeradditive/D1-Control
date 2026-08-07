@@ -48,7 +48,7 @@ def forget() -> bool:
             for conn in result.stdout.strip().split('\n'):
                 if not conn:
                     continue
-                name, device = conn.split(":", 1)
+                name, device = conn.rsplit(":", 1)
                 if "wlan" in device:
                     subprocess.run(['nmcli', 'connection', 'delete', name], check=True)
                     print(f"[Network] Connessione '{name}' dimenticata.")
