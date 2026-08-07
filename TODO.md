@@ -12,21 +12,6 @@ Legenda priorità:
 
 ---
 
-## 🔴 Critici
-
-### 1. Nessuna autenticazione sugli endpoint distruttivi
-
-Backend e frontend ora ascoltano solo su `127.0.0.1` e l'unico ingresso dalla rete è nginx
-sulla :80, ma su quella porta non c'è ancora alcuna autenticazione: chiunque sulla LAN può
-chiamare `POST /api/update/apply` (git pull + reboot), `POST /api/config/reset`,
-`POST /api/network/connect`, `POST /api/config/timezone` e riavviare o riconfigurare la
-macchina.
-
-**Da decidere**: un token (o una PIN lato UI) per gli endpoint distruttivi, tenendo conto che
-il kiosk locale deve continuare a funzionare senza interazione.
-
----
-
 ## 🟠 Bug
 
 ### Backend
