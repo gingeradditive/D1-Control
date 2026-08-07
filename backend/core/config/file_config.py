@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import threading
 from typing import TypeVar, Type, Any
 
 CONFIG_FILE = "config.json"
@@ -25,6 +26,9 @@ class FileConfig:
     def __init__(self, path: str = CONFIG_FILE, defaults: dict[str, Any] = None):
         self.path = path
         self.defaults = defaults or DEFAULT_CONFIG
+        # Serializza le sequenze leggi->modifica->scrivi: os.replace() rende atomica
+        # solo la sostituzione del file, non l'intera read-modify-write di set()/reset().
+        self._lock = threading.Lock()
         # Se non esiste, crea il file con i valori di default
         if not os.path.exists(self.path):
             self._write(self.defaults)
@@ -85,9 +89,10 @@ class FileConfig:
             return default
 
     def set(self, key: str, value: Any) -> None:
-        data = self._read()
-        data[key] = self._normalize(value)
-        self._write(data)
+        with self._lock:
+            data = self._read()
+            data[key] = self._normalize(value)
+            self._write(data)
 
     @staticmethod
     def _normalize(value: Any) -> Any:
@@ -109,9 +114,10 @@ class FileConfig:
     def reset(self) -> None:
         """Elimina il file di configurazione e lo ricrea con i valori di default."""
         try:
-            if os.path.exists(self.path):
-                os.remove(self.path)
-            self._write(self.defaults)
+            with self._lock:
+                if os.path.exists(self.path):
+                    os.remove(self.path)
+                self._write(self.defaults)
             print(f"[Config] {self.path} è stato resettato ai valori di default.")
         except Exception as e:
             print(f"[Config] Errore nel reset del file {self.path}: {e}")

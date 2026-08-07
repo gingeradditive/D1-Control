@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **Read-modify-write senza lock** su `config.json` e `presets.json`, da thread di
-      background e worker FastAPI concorrenti. `os.replace` rende atomica la sostituzione del
-      file, non la sequenza leggi→modifica→scrivi: due `set()` simultanei perdono un
-      aggiornamento. Serve un `threading.Lock` in `FileConfig`.
 - [ ] **`valve` non verifica che pigpiod risponda.** [valve.py:26](backend/dryer/components/valve.py#L26)
       fa `pigpio.pi()` e non controlla `.connected`: se il demone non è attivo ogni
       `set_servo_pulsewidth` solleva un'eccezione — ora silenziata dal `try/except` che ho
