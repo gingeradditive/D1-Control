@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`valve` non verifica che pigpiod risponda.** [valve.py:26](backend/dryer/components/valve.py#L26)
-      fa `pigpio.pi()` e non controlla `.connected`: se il demone non è attivo ogni
-      `set_servo_pulsewidth` solleva un'eccezione — ora silenziata dal `try/except` che ho
-      aggiunto al loop, quindi la valvola fallirebbe **in silenzio**.
 - [ ] **`Fan.on()` non fa il setup difensivo** che fa `Heater.on()`
       ([fan.py:19](backend/dryer/components/fan.py#L19) vs
       [heater.py:19-30](backend/dryer/components/heater.py#L19-L30)). Se la ventola merita

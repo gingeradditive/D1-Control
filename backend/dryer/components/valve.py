@@ -22,6 +22,8 @@ class Valve:
         if IS_RASPBERRY:
             self._pi = pigpio.pi()
             # no explicit set here; controller can call set_pulse when needed
+            if not self._pi.connected:
+                print("[Valve] WARNING: pigpiod is not running or unreachable — the valve will not move.")
 
     def _map_angle_to_pulse(self, angle: float) -> int:
         # 0-180 -> 500-2500 microseconds
@@ -30,6 +32,9 @@ class Valve:
     def _set_angle(self, angle: float):
         pulse = self._map_angle_to_pulse(angle)
         if IS_RASPBERRY and self._pi:
+            if not self._pi.connected:
+                print(f"[Valve] WARNING: pigpiod not connected, cannot set angle {angle}")
+                return
             self._pi.set_servo_pulsewidth(self.servo_pin, pulse)
             # disable servo after small delay
             threading.Timer(self.disable_after, lambda: self._pi.set_servo_pulsewidth(self.servo_pin, 0)).start()
@@ -52,5 +57,6 @@ class Valve:
 
     def cleanup(self):
         if IS_RASPBERRY and self._pi:
-            self._pi.set_servo_pulsewidth(self.servo_pin, 0)
+            if self._pi.connected:
+                self._pi.set_servo_pulsewidth(self.servo_pin, 0)
             self._pi.stop()
