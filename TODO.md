@@ -16,9 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **Polling `/status` senza guardia sull'in-flight**
-      ([StatusManager.jsx:104-122](frontend/src/components/StatusManager.jsx#L104-L122)): se il
-      backend rallenta, le richieste si accumulano.
 - [ ] **`timerSet={false} // TODO`** in [Footer.jsx](frontend/src/components/Footer.jsx) — spia
       sempre spenta.
 

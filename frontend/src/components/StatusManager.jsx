@@ -102,7 +102,10 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
 
   // Fetch status regolarmente
   useEffect(() => {
+    let inFlight = false;
     const interval = setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
       api.getStatus()
         .then(res => {
           setStatus(res.data);
@@ -115,6 +118,9 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
           if (onBackendAvailabilityChange) {
             onBackendAvailabilityChange(false);
           }
+        })
+        .finally(() => {
+          inFlight = false;
         });
     }, 1000);
 
