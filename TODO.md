@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Nessun limite di sicurezza assoluto** indipendente dal setpoint: `SENSOR_TEMP_MAX` è a
-      300 °C, cioè una soglia di guasto sensore, non un limite di processo. Aggiungere un
-      cutoff duro (es. 90 °C) che spegne comunque.
 - [ ] **Media/filtro sulle letture.** Il MAX6675 converte in ~220 ms e viene letto a 1 Hz senza
       filtro: la temperatura mostrata è un singolo campione rumoroso. Media mobile su 3-5
       letture.

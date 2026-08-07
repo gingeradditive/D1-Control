@@ -17,6 +17,14 @@ from backend.core.errors import ErrorRegistry
 SENSOR_TEMP_MIN = 5.0    # °C — below this the probe is disconnected or shorted
 SENSOR_TEMP_MAX = 300.0  # °C — above this the probe is disconnected or the MAX6675 fault bit is set
 
+# Cutoff di processo assoluto, indipendente dal setpoint (max consentito 90°C,
+# vedi backend/core/constants.py): SENSOR_TEMP_MAX è una soglia di guasto
+# sensore, non un limite di sicurezza — un setpoint sbagliato o un controllo
+# fuori scala non verrebbero mai fermati da quella sola. Spegne comunque il
+# riscaldatore, indipendentemente dal setpoint impostato.
+PROCESS_TEMP_HARD_CUTOFF = 95.0  # °C
+_HARD_CUTOFF_KEY = "Hard safety cutoff: temperature above process limit"
+
 # Consecutive bad readings before entering fault state, and consecutive good readings to exit it.
 _FAULT_TRIP_COUNT  = 3
 _FAULT_CLEAR_COUNT = 5
@@ -219,6 +227,17 @@ class DryerController:
             return
 
         now = time.monotonic()
+
+        # Cutoff duro, sopra qualunque setpoint: vedi PROCESS_TEMP_HARD_CUTOFF sopra.
+        if temp >= PROCESS_TEMP_HARD_CUTOFF:
+            self.heater.off()
+            self.last_heater_toggle = now
+            self._heat_stall_baseline = None
+            self.errors.record(_HARD_CUTOFF_KEY, sticky=True)
+            print(f"Heater OFF (hard safety cutoff: {temp:.1f}°C >= {PROCESS_TEMP_HARD_CUTOFF:.1f}°C)")
+            return
+        self.errors.pop(_HARD_CUTOFF_KEY, None)
+
         needs_heat = temp < (self.set_temp - self.tolerance)
         at_or_above = temp >= self.set_temp
 
