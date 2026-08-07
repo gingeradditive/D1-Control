@@ -63,6 +63,9 @@ def set_timezone(timezone: str = Form(...)):
 def factory_reset():
     try:
         config.reset()
+        dryer = controllers.get("dryer")
+        if dryer is not None:
+            dryer.apply_config()
         return {"status": "Success", "message": "Configuration reset to factory defaults"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Factory reset failed: {e}")

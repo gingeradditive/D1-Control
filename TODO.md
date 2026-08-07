@@ -31,9 +31,6 @@ il kiosk locale deve continuare a funzionare senza interazione.
 
 ### Backend
 
-- [ ] **Il factory reset non ricarica il controller**: `config.reset()`
-      ([config.py:55](backend/api/routes/config.py#L55)) riscrive il file ma setpoint, tempi
-      e durate in memoria restano quelli vecchi fino al riavvio del servizio.
 - [ ] **Controller catturati a import-time.** [update.py:6](backend/api/routes/update.py#L6),
       [network.py:10](backend/api/routes/network.py#L10),
       [config.py:5-6](backend/api/routes/config.py#L5-L6) fanno
