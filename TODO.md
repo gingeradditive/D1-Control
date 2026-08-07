@@ -14,8 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **`screensaver_delay` è una chiave di config morta**: il codice usa
-      `inactivity_timeout`. Rimuoverla dai default.
 - [ ] **Versione = hash di commit** ([SettingsDialog.jsx:325](frontend/src/components/SettingsDialog.jsx#L325)):
       per il supporto sul campo serve un tag semver leggibile.
 

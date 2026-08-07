@@ -16,7 +16,6 @@ DEFAULT_CONFIG = {
     "purge_time": 1,
     "cycle_time": 60,
     "inactivity_timeout": 5,
-    "screensaver_delay": 300,
     "pinned_preset_ids": ["pla", "petg"],
 }
 
