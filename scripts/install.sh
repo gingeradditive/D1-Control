@@ -385,15 +385,21 @@ done
 section "SUDO REBOOT"
 REBOOT_PATH=$(which reboot)
 SYSTEMD_RUN_PATH=$(which systemd-run || echo /usr/bin/systemd-run)
+TIMEDATECTL_PATH=$(which timedatectl || echo /usr/bin/timedatectl)
 SUDOERS_FILE=/etc/sudoers.d/dryer-reboot
 # La seconda regola serve a backend/update/system_control.py per eseguire
 # `pip install` e la build del frontend fuori dal cgroup del servizio, che ha
 # MemoryMax=400M e farebbe intervenire l'OOM killer. Il comando finale gira
 # comunque come $USERNAME grazie a runuser, quindi non concede privilegi extra.
 # Deve restare identica a _scope_prefix() in system_control.py.
+# La terza regola serve a backend/core/config/system_config.py: senza di essa
+# `sudo timedatectl set-timezone` chiede la password e il cambio fuso orario
+# fallisce in silenzio. Il nome della timezone e' validato lato backend contro
+# `timedatectl list-timezones`.
 sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
 $USERNAME ALL=NOPASSWD: $REBOOT_PATH
 $USERNAME ALL=NOPASSWD: $SYSTEMD_RUN_PATH --scope --quiet --collect --unit=dryer-update -p MemoryMax=infinity -p MemorySwapMax=infinity runuser -u $USERNAME -- /bin/sh -c *
+$USERNAME ALL=NOPASSWD: $TIMEDATECTL_PATH set-timezone *
 EOF
 sudo chmod 440 "$SUDOERS_FILE"
 sudo visudo -c -f "$SUDOERS_FILE" || { err "sudoers non valido, rimuovo"; sudo rm "$SUDOERS_FILE"; exit 1; }

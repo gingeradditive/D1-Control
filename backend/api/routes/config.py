@@ -62,9 +62,9 @@ def get_timezone():
 def set_timezone(timezone: str = Form(...)):
     try:
         system.set_timezone(timezone)
-        return {"status": "Success", "message": f"Timezone set to {system.get_timezone()}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "Success", "message": f"Timezone set to {system.get_timezone()}"}
 
 @router.post("/reset")
 def factory_reset():

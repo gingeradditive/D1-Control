@@ -174,8 +174,13 @@ export default function SettingsDialog({
       .then(() => {
         setUpdateStatus(`Timezone updated to ${newTz}`);
       })
-      .catch(() => {
-        setSaveError("Failed to update timezone.");
+      .catch((err) => {
+        const detail = err?.response?.data?.detail;
+        setSaveError(detail ? `Failed to update timezone: ${detail}` : "Failed to update timezone.");
+        // Il cambio non e' andato a buon fine: riallinea la UI al sistema.
+        api.getTimezone()
+          .then(res => setTimezone(res.data.timezone))
+          .catch(() => {});
       })
       .finally(() => setSavingTz(false));
   };

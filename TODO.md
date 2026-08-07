@@ -14,18 +14,7 @@ Legenda priorità:
 
 ## 🔴 Critici
 
-### 1. Il cambio timezone non funziona in produzione
-
-[system_config.py:8](backend/core/config/system_config.py#L8) esegue
-`sudo timedatectl set-timezone`, ma il sudoers scritto da
-[install.sh:366-370](scripts/install.sh#L366-L370) concede NOPASSWD **solo su `reboot`**.
-Il comando chiede la password, fallisce, `set_timezone` ritorna `False` — e
-[config.py:47-51](backend/api/routes/config.py#L47-L51) **ignora il ritorno** e risponde
-comunque `{"status": "Success"}`. La UI mostra conferma di un'operazione mai avvenuta.
-
-**Fix**: aggiungere `timedatectl` al sudoers e far propagare il `False` come errore HTTP.
-
-### 2. Un guasto sensore produce lo stesso sintomo del bug appena risolto
+### 1. Un guasto sensore produce lo stesso sintomo del bug appena risolto
 
 [controller.py:177-179](backend/dryer/controller.py#L177-L179): in caso di lettura non
 valida, `read_sensor()` ritorna l'ultima lettura buona **senza appenderla alla history**.
@@ -35,7 +24,7 @@ Il display mostra quindi un numero fermo che sembra valido. È un secondo percor
 **Fix**: quando `sensor_fault` è attivo, `/status` deve restituire `current_temp: null` e la
 UI mostrare `--`. Il valore di fallback resta interno a `update_heater`.
 
-### 3. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
+### 2. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
 
 Il backend ascolta su `0.0.0.0:8000` (oltre a nginx su :80) senza alcuna autenticazione, ed
 espone `POST /api/update/apply` (git pull + reboot), `POST /api/config/reset`,
