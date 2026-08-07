@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **`round(temp)` in `/status`** ([dryer.py:17](backend/api/routes/dryer.py#L17)) butta
-      via la risoluzione del sensore (0.25 °C) prima ancora che la UI decida come formattarla.
 - [ ] **Closure stale sullo screensaver.** `resetTimer`
       ([StatusManager.jsx:200-224](frontend/src/components/StatusManager.jsx#L200-L224)) è
       catturato dall'effect con deps `[inactivityTimeout, isKiosk]` e vede sempre

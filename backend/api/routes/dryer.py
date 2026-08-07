@@ -16,7 +16,7 @@ def get_status():
     # Con un fault sensore il valore in memoria è l'ultima lettura buona, tenuta
     # solo per far lavorare update_heater in sicurezza. Esporla mostrerebbe un
     # numero fermo che sembra valido: meglio nessun valore, la UI mostra "--".
-    current_temp = None if dryer.sensor_fault or temp is None else round(temp)
+    current_temp = None if dryer.sensor_fault or temp is None else round(temp, 2)
     return {
         "setpoint": dryer.set_temp,
         "current_temp": current_temp,
