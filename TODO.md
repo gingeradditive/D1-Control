@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Installazione / sistema
 
-- [ ] **Variabile morta** `KEY` in [install.sh:353](scripts/install.sh#L353), calcolata e mai
-      usata.
 - [ ] **`sudo sysctl` e `sudo swapon` non sono sotto la guardia `IS_BUILD`**
       ([install.sh:107](scripts/install.sh#L107)) — in chroot possono fallire.
 - [ ] **`reverse_proxy.py` importa `httpx`, assente da `requirements.txt`.**
@@ -66,7 +64,7 @@ Legenda priorità:
 - [ ] **Stato "acceso" non persistente**: dopo un riavvio imprevisto il dryer resta spento senza
       alcuna segnalazione all'operatore che il ciclo è stato interrotto.
 - [ ] **Messaggi misti italiano/inglese** in log e UI (`"Setpoint aggiornato a"` accanto a
-      `"Heater ON"`). Scegliere una lingua per i log e una per la UI.
+      `"Heater ON"`). Scegliere una lingua per i log e una per la UI (UTILIZZARE INGLESE)
 - [ ] **`screensaver_delay` è una chiave di config morta**: il codice usa
       `inactivity_timeout`. Rimuoverla dai default.
 - [ ] **Versione = hash di commit** ([SettingsDialog.jsx:325](frontend/src/components/SettingsDialog.jsx#L325)):

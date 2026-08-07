@@ -371,7 +371,6 @@ EOF
 
 section "HARDWARE SPI/I2C"
 for PARAM in "dtparam=spi=on" "dtparam=i2c_arm=on"; do
-    KEY="${PARAM%%=*}=${PARAM##*=on}"   # dtparam=spi / dtparam=i2c_arm
     sudo sed -i "s/^#${PARAM}/${PARAM}/" "$BOOT_CONFIG" || true
     grep -q "^${PARAM}" "$BOOT_CONFIG" || echo "$PARAM" | sudo tee -a "$BOOT_CONFIG"
 done
