@@ -12,16 +12,6 @@ Legenda priorità:
 
 ---
 
-## 🟠 Bug
-
-### Installazione / sistema
-
-- [ ] **`import board` in [scanner.py](backend/network/scanner.py)**: import inutilizzato di
-      Adafruit Blinka, **non dichiarato in `requirements.txt`**. Oggi funziona solo perché il
-      pacchetto è presente nell'immagine `mainsailos` di base (verificato: lo scan restituisce
-      reti reali). Se sparisse, `IS_RASPBERRY` diventerebbe `False` e lo scan Wi-Fi
-      restituirebbe in silenzio **le tre reti finte di simulazione** in produzione. Rimuovere
-      l'import.
 
 ---
 

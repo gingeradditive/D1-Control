@@ -2,7 +2,6 @@ import subprocess
 import time
 
 try:
-    import board
     import RPi.GPIO as GPIO
     IS_RASPBERRY = True
 except (ImportError, NotImplementedError):
