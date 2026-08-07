@@ -16,13 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`purge_time` / `cycle_time`: unità ambigue.** Il controller li tratta come **minuti**
-      (`* 60`, [controller.py:373](backend/dryer/controller.py#L373)), la UI li etichetta
-      "(min)", ma le route li chiamano `seconds`
-      ([dryer.py:89](backend/api/routes/dryer.py#L89),
-      [dryer.py:101](backend/api/routes/dryer.py#L101)). Il `config.json` versionato nel repo
-      ha `purge_time: 60, cycle_time: 3600`, cioè valori scritti pensando ai secondi: chi lo
-      usasse otterrebbe uno spurgo da **60 minuti**.
 - [ ] **Preset creato con `pinned: true` non viene mai pinnato.**
       `create_preset` ([presets.py](backend/api/routes/presets.py)) salva il campo nel file
       ma non aggiorna `pinned_preset_ids` in config, che è la vera fonte di verità

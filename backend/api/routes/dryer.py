@@ -105,21 +105,21 @@ def get_purge_time():
     dryer = controllers["dryer"]
     return {"purge_time": dryer.purge_time}
 
-@router.post("/purge-time/{seconds}")
-def set_purge_time(seconds: int):
+@router.post("/purge-time/{minutes}")
+def set_purge_time(minutes: int):
     dryer = controllers["dryer"]
-    dryer.purge_time = seconds
-    dryer.config.set("purge_time", seconds)
-    return {"purge_time": seconds}
+    dryer.purge_time = minutes
+    dryer.config.set("purge_time", minutes)
+    return {"purge_time": minutes}
 
 @router.get("/cycle-time")
 def get_cycle_time():
     dryer = controllers["dryer"]
     return {"cycle_time": dryer.cycle_time}
 
-@router.post("/cycle-time/{seconds}")
-def set_cycle_time(seconds: int):
+@router.post("/cycle-time/{minutes}")
+def set_cycle_time(minutes: int):
     dryer = controllers["dryer"]
-    dryer.cycle_time = seconds
-    dryer.config.set("cycle_time", seconds)
-    return {"cycle_time": seconds}
+    dryer.cycle_time = minutes
+    dryer.config.set("cycle_time", minutes)
+    return {"cycle_time": minutes}
