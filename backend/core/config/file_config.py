@@ -21,7 +21,14 @@ DEFAULT_CONFIG = {
 
 
 class FileConfig:
-    """Gestione del file config.json"""
+    """Gestione del file config.json.
+
+    Lo stato vive in memoria (self._data) e il file è la sua copia
+    persistita: get()/all() leggono dalla cache, set() scrive su disco solo
+    quando il valore cambia davvero. Prima ogni get()/set() rileggeva e
+    riscriveva l'intero JSON con fsync, inutile usura della SD dato che
+    l'unico scrittore del file è questa stessa istanza.
+    """
 
     def __init__(self, path: str = CONFIG_FILE, defaults: dict[str, Any] = None):
         self.path = path
@@ -31,18 +38,19 @@ class FileConfig:
         self._lock = threading.Lock()
         # Se non esiste, crea il file con i valori di default
         if not os.path.exists(self.path):
-            self._write(self.defaults)
+            self._data = dict(self.defaults)
+            self._write(self._data)
         else:
+            self._data = self._read()
             self._migrate()
 
     def _migrate(self) -> None:
         """Integra una sola volta, all'avvio, le chiavi di default mancanti.
         Fuori da qui il file viene scritto solo su set()/reset()."""
-        data = self._read()
-        missing = {k: v for k, v in self.defaults.items() if k not in data}
+        missing = {k: v for k, v in self.defaults.items() if k not in self._data}
         if missing:
-            data.update(missing)
-            self._write(data)
+            self._data.update(missing)
+            self._write(self._data)
 
     def _read(self) -> dict[str, Any]:
         try:
@@ -74,12 +82,12 @@ class FileConfig:
                     pass
 
     def get(self, key: str, default: T, cast_type: Type[T] = str) -> T:
-        """Legge una chiave. Non modifica mai il file: una chiave assente
-        ritorna il default senza essere persistita."""
-        data = self._read()
-        if key not in data:
-            return default
-        value = data[key]
+        """Legge una chiave dalla cache in memoria. Non modifica mai il file:
+        una chiave assente ritorna il default senza essere persistita."""
+        with self._lock:
+            if key not in self._data:
+                return default
+            value = self._data[key]
         if value is None:
             return default
         try:
@@ -89,10 +97,12 @@ class FileConfig:
             return default
 
     def set(self, key: str, value: Any) -> None:
+        normalized = self._normalize(value)
         with self._lock:
-            data = self._read()
-            data[key] = self._normalize(value)
-            self._write(data)
+            if key in self._data and self._data[key] == normalized:
+                return  # nessuna modifica reale: salta la scrittura su disco
+            self._data[key] = normalized
+            self._write(self._data)
 
     @staticmethod
     def _normalize(value: Any) -> Any:
@@ -109,15 +119,17 @@ class FileConfig:
         return value
 
     def all(self) -> dict[str, Any]:
-        return self._read()
+        with self._lock:
+            return dict(self._data)
 
     def reset(self) -> None:
         """Elimina il file di configurazione e lo ricrea con i valori di default."""
         try:
             with self._lock:
+                self._data = dict(self.defaults)
                 if os.path.exists(self.path):
                     os.remove(self.path)
-                self._write(self.defaults)
+                self._write(self._data)
             print(f"[Config] {self.path} was reset to default values.")
         except Exception as e:
             print(f"[Config] Error resetting file {self.path}: {e}")

@@ -12,16 +12,8 @@ Legenda priorità:
 
 ---
 
-## 🟡 Migliorie
-
-
----
-
 ## 🔵 Ottimizzazioni
 
-- [ ] **Usura della SD.** `FileConfig` rilegge e riscrive l'intero JSON con `fsync` ad **ogni**
-      `get()` e `set()` ([file_config.py](backend/core/config/file_config.py)). Tenere lo stato
-      in memoria e scrivere in write-behind solo su modifica reale.
 - [ ] **`periodic_save_hours` fa due `set()`**
       ([controller.py:262-269](backend/dryer/controller.py#L262-L269)) = due cicli
       read+write+fsync ogni 5 minuti dove ne basta uno.
