@@ -137,7 +137,7 @@ sudo apt-get install --no-install-recommends -y \
     lightdm \
     lightdm-gtk-greeter \
     unclutter \
-    chromium-browser \
+    chromium \
     python3-venv \
     python3-pip \
     git \
@@ -416,7 +416,7 @@ xset s noblank
 unclutter -idle 0 &
 
 # Avvia Chromium in modalità kiosk
-chromium-browser \\
+chromium \\
   --noerrdialogs \\
   --disable-infobars \\
   --kiosk \\

@@ -14,22 +14,8 @@ Legenda priorità:
 
 ## 🟠 Bug
 
-### Frontend
-
-
 ### Installazione / sistema
 
-- [ ] **`chromium-browser` non esiste su Bookworm** (il pacchetto è `chromium`):
-      [install.sh:139](scripts/install.sh#L139) e
-      [install.sh:385](scripts/install.sh#L385). Lo script dichiara compatibilità
-      Bullseye/Bookworm ma il kiosk non partirebbe su Bookworm.
-- [ ] **SSH non raggiungibile sull'immagine** (porta 22 rifiuta la connessione sulla macchina
-      di test). Diagnosticare da remoto è impossibile: oggi ho potuto lavorare solo perché la
-      8000 è esposta. Decidere consapevolmente se abilitarlo o fornire un canale diagnostico
-      alternativo.
-- [ ] **Credenziali di default hardcoded**: utente `pi` con password `raspberry` e sudo pieno
-      ([install.sh:69](scripts/install.sh#L69),
-      [install.sh:74](scripts/install.sh#L74)).
 - [ ] **Variabile morta** `KEY` in [install.sh:353](scripts/install.sh#L353), calcolata e mai
       usata.
 - [ ] **`sudo sysctl` e `sudo swapon` non sono sotto la guardia `IS_BUILD`**
