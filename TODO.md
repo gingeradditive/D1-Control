@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **Mostra `0°` invece di `--` all'avvio.** `get_status_data()` ritorna `0.0` se la
-      history è vuota ([controller.py:350-352](backend/dryer/controller.py#L350-L352)) e
-      `currentTemp !== null` è vero per `0`
-      ([TemperatureDisplay.jsx:107](frontend/src/components/TemperatureDisplay.jsx#L107)).
 - [ ] **`round(temp)` in `/status`** ([dryer.py:17](backend/api/routes/dryer.py#L17)) butta
       via la risoluzione del sensore (0.25 °C) prima ancora che la UI decida come formattarla.
 - [ ] **Closure stale sullo screensaver.** `resetTimer`

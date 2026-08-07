@@ -368,7 +368,7 @@ class DryerController:
 
     def get_status_data(self):
         if not self.history:
-            return datetime.now(), 0.0, False, False, False
+            return datetime.now(), None, False, False, False
         ts, temp, htr, fan, vlv = self.history[-1]
         return ts, temp, htr, fan, vlv
 
