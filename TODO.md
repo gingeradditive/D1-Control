@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **Nessun `timeout` sul client axios** ([api.jsx](frontend/src/api.jsx)): una richiesta
-      appesa resta appesa, e il polling a 1 Hz continua ad accodarne altre.
 - [ ] **Polling `/status` senza guardia sull'in-flight**
       ([StatusManager.jsx:104-122](frontend/src/components/StatusManager.jsx#L104-L122)): se il
       backend rallenta, le richieste si accumulano.

@@ -6,6 +6,7 @@ const BASE_URL = import.meta.env.DEV
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -20,7 +21,8 @@ export const api = {
 
   // --- Network ---
   getConnection: () => apiClient.get("/api/network/"),
-  setConnection: (ssid, password) => apiClient.post("/api/network/connect", { ssid, password }),
+  // Timeout esteso: il backend concede fino a 30s a nmcli per connettersi.
+  setConnection: (ssid, password) => apiClient.post("/api/network/connect", { ssid, password }, { timeout: 35000 }),
   getConnectionStatus: () => apiClient.get("/api/network/status"),
   getconnectionG1OS: () => apiClient.get("/api/network/g1os"),
   setConnectionForget: () => apiClient.post("/api/network/forget"),
@@ -47,7 +49,8 @@ export const api = {
   // --- Update ---
   getUpdateVersion: () => apiClient.get("/api/update/version"),
   getUpdateCheck: () => apiClient.get("/api/update/check"),
-  applyUpdate: () => apiClient.post("/api/update/apply"),
+  // Nessun timeout: git pull + install deps + build frontend possono richiedere minuti.
+  applyUpdate: () => apiClient.post("/api/update/apply", null, { timeout: 0 }),
 
   // --- 🕒 Timezone ---
   /** Ottiene la timezone attuale dal Raspberry Pi */
