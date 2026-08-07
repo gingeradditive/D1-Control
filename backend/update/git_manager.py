@@ -25,14 +25,24 @@ def git_pull(project_path: Path) -> str:
 
 
 def get_current_version(project_path: Path) -> dict:
-    """Ritorna info sul commit attuale."""
+    """Ritorna info sul commit attuale.
+
+    "version" preferisce un tag semver leggibile (es. v1.2.3, o
+    v1.2.3-4-gabcdef se ci sono commit dopo l'ultimo tag) e ricade
+    sull'hash corto se nel repo non esiste ancora nessun tag.
+    """
     mark_directory_safe(project_path)
     commit_hash = run_command("git rev-parse HEAD", cwd=project_path)
     commit_msg = run_command("git log -1 --pretty=%B", cwd=project_path)
     commit_date = run_command("git log -1 --date=iso --pretty=format:%cd", cwd=project_path)
+    try:
+        version = run_command("git describe --tags --always --dirty", cwd=project_path).strip()
+    except RuntimeError:
+        version = commit_hash.strip()[:7]
 
     return {
         "commit": commit_hash.strip()[:7],
+        "version": version,
         "message": commit_msg.strip(),
         "date": commit_date.strip(),
     }

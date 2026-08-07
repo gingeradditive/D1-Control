@@ -354,7 +354,7 @@ export default function SettingsDialog({
               <SectionTitle icon={<SystemUpdateIcon sx={{ fontSize: 16, color: 'rgb(215, 46, 40)' }} />} title="System Update" />
               {versionInfo && (
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                  Version: <strong>{versionInfo.commit.slice(0, 7)}</strong><br />
+                  Version: <strong>{versionInfo.version || versionInfo.commit.slice(0, 7)}</strong><br />
                   Date: <strong>{new Date(versionInfo.date).toLocaleString()}</strong>
                 </Typography>
               )}
