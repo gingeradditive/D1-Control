@@ -16,9 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`subprocess.run` senza `timeout`** in `connect()` e `forget()`
-      ([connection.py](backend/network/connection.py)): un nmcli bloccato occupa per sempre
-      un worker del threadpool.
 - [ ] **`except:` nudo** in [status.py](backend/network/status.py) — cattura anche
       `KeyboardInterrupt`/`SystemExit`.
 - [ ] **`is_update_available()` fa `git fetch` sincrono**

@@ -15,7 +15,7 @@ def connect(ssid: str, password: str) -> bool:
         try:
             result = subprocess.run(
                 ['nmcli', 'device', 'wifi', 'connect', ssid, 'password', password],
-                capture_output=True, text=True
+                capture_output=True, text=True, timeout=30
             )
             if result.returncode == 0:
                 print(f"[Network] Connesso con successo a {ssid}")
@@ -39,7 +39,7 @@ def forget() -> bool:
             # Ottieni connessione attiva
             result = subprocess.run(
                 ['nmcli', '-t', '-f', 'NAME,DEVICE', 'connection', 'show', '--active'],
-                capture_output=True, text=True
+                capture_output=True, text=True, timeout=10
             )
             if result.returncode != 0:
                 print(f"[Network] Nessuna connessione attiva: {result.stderr}")
@@ -50,7 +50,7 @@ def forget() -> bool:
                     continue
                 name, device = conn.rsplit(":", 1)
                 if "wlan" in device:
-                    subprocess.run(['nmcli', 'connection', 'delete', name], check=True)
+                    subprocess.run(['nmcli', 'connection', 'delete', name], check=True, timeout=10)
                     print(f"[Network] Connessione '{name}' dimenticata.")
                     return True
             print("[Network] Nessuna connessione Wi-Fi trovata.")
