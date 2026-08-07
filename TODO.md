@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Frontend
 
-- [ ] **`Grid item xs={4}`** ([SettingsDialog.jsx:249](frontend/src/components/SettingsDialog.jsx#L249)):
-      la prop `item` è stata rimossa nel Grid di MUI v7.
 - [ ] **Nessun `timeout` sul client axios** ([api.jsx](frontend/src/api.jsx)): una richiesta
       appesa resta appesa, e il polling a 1 Hz continua ad accodarne altre.
 - [ ] **Polling `/status` senza guardia sull'in-flight**
