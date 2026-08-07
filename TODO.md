@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`install_backend_dependencies` non quota il path**:
-      `f"{venv_pip} install -r requirements.txt"` con `shell=True`
-      ([dependencies.py](backend/update/dependencies.py)) si rompe se il progetto sta in una
-      directory con spazi.
 
 ### Frontend
 
