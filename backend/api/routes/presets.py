@@ -98,6 +98,17 @@ def _all_presets() -> list[dict]:
     return HARDCODED_PRESETS + user_presets
 
 
+def _set_pinned(preset_id: str, pinned: bool) -> None:
+    """`pinned_preset_ids` in config è l'unica fonte di verità per lo stato pinned."""
+    pinned_ids = _get_pinned_ids()
+    if pinned:
+        if preset_id not in pinned_ids and len(pinned_ids) < MAX_PINNED_PRESETS:
+            controllers["config"].set("pinned_preset_ids", pinned_ids + [preset_id])
+    else:
+        if preset_id in pinned_ids:
+            controllers["config"].set("pinned_preset_ids", [i for i in pinned_ids if i != preset_id])
+
+
 def _get_pinned_ids() -> list[str]:
     config = controllers["config"]
     all_presets = _all_presets()
@@ -156,11 +167,15 @@ def create_preset(preset: PresetCreate):
         "id": str(uuid.uuid4())[:8],
         "name": preset.name,
         "temperature": preset.temperature,
-        "pinned": preset.pinned,
         "builtin": False,
     }
     user_presets.append(new_preset)
     _write_user_presets(user_presets)
+
+    if preset.pinned:
+        _set_pinned(new_preset["id"], True)
+
+    new_preset["pinned"] = new_preset["id"] in _get_pinned_ids()
     return new_preset
 
 
@@ -184,10 +199,11 @@ def update_preset(preset_id: str, preset: PresetUpdate):
                 p["name"] = preset.name
             if preset.temperature is not None:
                 p["temperature"] = preset.temperature
-            if preset.pinned is not None:
-                p["pinned"] = preset.pinned
             _write_user_presets(user_presets)
+            if preset.pinned is not None:
+                _set_pinned(preset_id, preset.pinned)
             p["builtin"] = False
+            p["pinned"] = preset_id in _get_pinned_ids()
             return p
 
     raise HTTPException(status_code=404, detail="Preset not found")

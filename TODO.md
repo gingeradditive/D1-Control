@@ -16,10 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **Preset creato con `pinned: true` non viene mai pinnato.**
-      `create_preset` ([presets.py](backend/api/routes/presets.py)) salva il campo nel file
-      ma non aggiorna `pinned_preset_ids` in config, che è la vera fonte di verità
-      (`GET /presets/` sovrascrive `p["pinned"]` da lì). Doppia fonte di verità da eliminare.
 - [ ] **Read-modify-write senza lock** su `config.json` e `presets.json`, da thread di
       background e worker FastAPI concorrenti. `os.replace` rende atomica la sostituzione del
       file, non la sequenza leggi→modifica→scrivi: due `set()` simultanei perdono un
