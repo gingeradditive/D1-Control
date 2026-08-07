@@ -1,4 +1,5 @@
 # backend/dryer/controller.py
+import bisect
 import glob
 import os
 import time
@@ -455,37 +456,52 @@ class DryerController:
                 for ts, temp, htr, fan, vlv in filtered
             ]
 
-        def _aggregate(filtered, window_start_fn, window_count):
-            results = []
-            for i in range(window_count):
-                ws = window_start_fn(i)
-                we = window_start_fn(i + 1) if i + 1 < window_count else now
-                window = [x for x in filtered if ws <= x[0] < we]
-                if not window:
+        def _aggregate(start, window_seconds, window_count):
+            # Bucket ogni punto nella sua finestra con un solo passaggio (indice
+            # calcolato per aritmetica, non con un filtro per finestra): prima
+            # richiedeva O(n × finestre), qui è O(n). self.history è ordinato
+            # per timestamp quindi un binary search sul punto di partenza basta
+            # per saltare i punti troppo vecchi senza scansionare tutta la deque.
+            lo = bisect.bisect_left(data, start, key=lambda x: x[0])
+            buckets = [None] * window_count
+            for x in data[lo:]:
+                idx = int((x[0] - start).total_seconds() // window_seconds)
+                if idx < 0 or idx >= window_count:
                     continue
-                temps = [x[1] for x in window]
-                heaters = [1 if x[2] else 0 for x in window]
-                fans = [1 if x[3] else 0 for x in window]
-                valves = [1 if x[4] else 0 for x in window]
-                n = len(window)
+                b = buckets[idx]
+                if b is None:
+                    buckets[idx] = [x[0], 1, x[1], 1 if x[2] else 0, 1 if x[3] else 0, 1 if x[4] else 0]
+                else:
+                    b[0] = min(b[0], x[0])
+                    b[1] += 1
+                    b[2] += x[1]
+                    b[3] += 1 if x[2] else 0
+                    b[4] += 1 if x[3] else 0
+                    b[5] += 1 if x[4] else 0
+
+            results = []
+            for i, b in enumerate(buckets):
+                if b is None:
+                    continue
+                ws = start + timedelta(seconds=window_seconds * i)
+                we = start + timedelta(seconds=window_seconds * (i + 1)) if i + 1 < window_count else now
+                _, n, temp_sum, htr_sum, fan_sum, vlv_sum = b
                 results.append((
                     ws + (we - ws) / 2,
-                    sum(temps) / n,
-                    sum(heaters) / n,
-                    sum(fans) / n,
-                    sum(valves) / n,
+                    temp_sum / n,
+                    htr_sum / n,
+                    fan_sum / n,
+                    vlv_sum / n,
                 ))
             return results
 
         if mode == '1h':
             start = now - timedelta(hours=1)
-            filtered = [x for x in data if x[0] >= start]
-            return _aggregate(filtered, lambda i: start + timedelta(minutes=i), 60)
+            return _aggregate(start, 60, 60)
 
         if mode == '12h':
             start = now - timedelta(hours=12)
-            filtered = [x for x in data if x[0] >= start]
-            return _aggregate(filtered, lambda i: start + timedelta(minutes=30 * i), 24)
+            return _aggregate(start, 30 * 60, 24)
 
         raise ValueError("Invalid mode")
 

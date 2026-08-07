@@ -14,10 +14,6 @@ Legenda priorità:
 
 ## 🔵 Ottimizzazioni
 
-- [ ] **`get_history_data` è O(n × finestre).** Scansiona tutti i 43200 punti una volta per
-      ciascuna delle 60 finestre ([controller.py:309-334](backend/dryer/controller.py#L309-L334)).
-      In modalità `1m` il ChartDialog la chiama **ogni secondo**. La deque è ordinata: usare
-      `bisect` per tagliare l'intervallo, o un singolo passaggio con bucket.
 - [ ] **`_cpu_usage()` fa `time.sleep(0.1)` dentro una route sincrona**
       ([stats.py:22-35](backend/api/routes/stats.py#L22-L35)), bloccando un worker del
       threadpool ad ogni richiesta di statistiche.
