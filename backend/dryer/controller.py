@@ -117,6 +117,43 @@ class DryerController:
         self.log_file = None
         self._log_date = None
 
+        # ripopola la history in RAM dal CSV di oggi, cosi' i grafici non
+        # ripartono vuoti ad ogni riavvio del servizio. Risoluzione più bassa
+        # (10s, contro l'1Hz della history live), best-effort: un file
+        # mancante o corrotto non deve mai impedire l'avvio.
+        self._load_history_from_csv()
+
+    def _load_history_from_csv(self):
+        log_file = f"logs/temperature_{datetime.now().strftime('%Y-%m-%d')}.csv"
+        if not os.path.exists(log_file):
+            return
+        try:
+            with open(log_file, "r") as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f"[DryerController] Cannot read {log_file} for history reload: {e}")
+            return
+
+        loaded = 0
+        for line in lines[1:]:  # skip header
+            parts = line.strip().split(";")
+            if len(parts) != 6:
+                continue
+            try:
+                ts = datetime.strptime(parts[0], "%Y-%m-%d %H:%M:%S")
+                temp = float(parts[1])
+                heater_on = bool(int(parts[2]))
+                fan_on = bool(int(parts[3]))
+                # parts[4] è il setpoint, non presente nella tupla di history
+                valve_open = bool(int(parts[5]))
+            except (ValueError, IndexError):
+                continue
+            self.history.append((ts, temp, heater_on, fan_on, valve_open))
+            loaded += 1
+
+        if loaded:
+            print(f"[DryerController] Ripopolati {loaded} punti di history da {log_file}")
+
     # --- deadman heartbeat ---
     def heartbeat(self):
         """Segnala che il loop di controllo ha completato un'iterazione."""

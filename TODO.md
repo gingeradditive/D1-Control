@@ -14,9 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **La `history` vive solo in RAM** (43200 punti,
-      [controller.py:48](backend/dryer/controller.py#L48)) e si perde ad ogni riavvio, benché il
-      CSV giornaliero esista già su disco e non venga mai riletto.
 - [ ] **Nessun endpoint `/api/health`.** Un endpoint che riporti l'età dell'ultima lettura
       sensore, lo stato del thread di background e l'uptime avrebbe reso il bug di oggi
       evidente in cinque secondi. È la singola aggiunta con il miglior rapporto
