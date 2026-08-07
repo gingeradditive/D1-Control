@@ -14,19 +14,7 @@ Legenda priorità:
 
 ## 🔴 Critici
 
-### 1. `POST /dryer/status/true` risponde OK anche quando l'avvio è rifiutato
-
-[dryer.py:36](backend/api/routes/dryer.py#L36) fa `dryer.start() if status else dryer.stop()`
-e **ignora il valore di ritorno**. `start()` ritorna `False` se `sensor_fault` è attivo
-([controller.py:85-99](backend/dryer/controller.py#L85-L99)). La guardia esplicita a
-[dryer.py:30](backend/api/routes/dryer.py#L30) copre solo il fault già noto al momento
-della richiesta. La UI applica comunque l'update ottimistico
-([StatusManager.jsx:255](frontend/src/components/StatusManager.jsx#L255)) → l'interfaccia
-mostra "in funzione" mentre la macchina è ferma.
-
-**Fix**: propagare il ritorno di `start()` come 409/400 e togliere l'ottimismo dalla UI.
-
-### 2. Nessun watchdog sul riscaldatore
+### 1. Nessun watchdog sul riscaldatore
 
 Il riscaldatore è comandato solo dal loop di background. Se quel loop si ferma (è appena
 successo), l'SSR resta nell'ultimo stato comandato — potenzialmente **acceso** —
@@ -37,7 +25,7 @@ un deadlock o un freeze del processo.
 watchdog hardware `/dev/watchdog` del Pi) spegne il riscaldatore se il timestamp è più
 vecchio di ~5 s. Aggiungere `RuntimeWatchdogSec` all'unit systemd.
 
-### 3. L'aggiornamento OTA viene ucciso dall'OOM killer
+### 2. L'aggiornamento OTA viene ucciso dall'OOM killer
 
 [install.sh:268](scripts/install.sh#L268) impone `MemoryMax=400M` al servizio backend.
 `POST /api/update/apply` esegue `npm install` e `npm run build`
@@ -48,7 +36,7 @@ sta in 400 MB.
 **Fix**: eseguire l'update tramite un'unit `systemd-run --scope` separata senza limite di
 memoria, oppure un servizio `dryer-update.service` oneshot dedicato.
 
-### 4. Il cambio timezone non funziona in produzione
+### 3. Il cambio timezone non funziona in produzione
 
 [system_config.py:8](backend/core/config/system_config.py#L8) esegue
 `sudo timedatectl set-timezone`, ma il sudoers scritto da
@@ -59,7 +47,7 @@ comunque `{"status": "Success"}`. La UI mostra conferma di un'operazione mai avv
 
 **Fix**: aggiungere `timedatectl` al sudoers e far propagare il `False` come errore HTTP.
 
-### 5. Un guasto sensore produce lo stesso sintomo del bug appena risolto
+### 4. Un guasto sensore produce lo stesso sintomo del bug appena risolto
 
 [controller.py:177-179](backend/dryer/controller.py#L177-L179): in caso di lettura non
 valida, `read_sensor()` ritorna l'ultima lettura buona **senza appenderla alla history**.
@@ -69,7 +57,7 @@ Il display mostra quindi un numero fermo che sembra valido. È un secondo percor
 **Fix**: quando `sensor_fault` è attivo, `/status` deve restituire `current_temp: null` e la
 UI mostrare `--`. Il valore di fallback resta interno a `update_heater`.
 
-### 6. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
+### 5. Nessuna autenticazione su un dispositivo che si auto-aggiorna e si riavvia
 
 Il backend ascolta su `0.0.0.0:8000` (oltre a nginx su :80) senza alcuna autenticazione, ed
 espone `POST /api/update/apply` (git pull + reboot), `POST /api/config/reset`,

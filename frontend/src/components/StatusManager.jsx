@@ -251,11 +251,16 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
 
   const handleStatusChange = () => {
     api.setStatus(!status.status)
-      .then(() => {
-        setStatus(prev => ({ ...prev, status: !prev.status }));
+      .then(res => {
+        // niente update ottimistico: si applica lo stato reale riportato dal backend
+        setStatus(prev => ({ ...prev, status: res.data?.running ?? prev.status }));
       })
       .catch(err => {
-        if (err?.response?.status === 400) {
+        const code = err?.response?.status;
+        if (code === 400 || code === 409) {
+          if (typeof err.response.data?.running === "boolean") {
+            setStatus(prev => ({ ...prev, status: err.response.data.running }));
+          }
           const detail = err.response.data?.detail || "Cannot start: sensor fault detected";
           enqueueSnackbar(detail, { variant: "error", persist: true,
             action: (id) => (

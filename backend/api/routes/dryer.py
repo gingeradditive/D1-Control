@@ -27,14 +27,26 @@ def get_status():
 @router.post("/status/{status}")
 def set_status(status: bool):
     dryer = controllers["dryer"]
-    if status and dryer.sensor_fault:
-        fault_detail = dryer.errors.get("sensor_fault", "Sensor fault detected")
-        return JSONResponse(
-            status_code=400,
-            content={"error": "sensor_fault", "detail": fault_detail},
-        )
-    dryer.start() if status else dryer.stop()
-    return {"status": "running" if status else "stopped"}
+    if status:
+        # start() è l'unica fonte di verità: può rifiutare l'avvio anche se il
+        # fault è comparso tra la richiesta e questo istante.
+        if not dryer.start():
+            fault_detail = dryer.errors.get("sensor_fault", "Sensor fault detected")
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "error": "sensor_fault",
+                    "detail": fault_detail,
+                    "status": "running" if dryer.dryer_status else "stopped",
+                    "running": dryer.dryer_status,
+                },
+            )
+    else:
+        dryer.stop()
+    return {
+        "status": "running" if dryer.dryer_status else "stopped",
+        "running": dryer.dryer_status,
+    }
 
 @router.get("/history")
 def get_history(mode: str = Query(default="1h", enum=["1m", "1h", "12h"])):
