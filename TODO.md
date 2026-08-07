@@ -14,10 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Nessun endpoint `/api/health`.** Un endpoint che riporti l'età dell'ultima lettura
-      sensore, lo stato del thread di background e l'uptime avrebbe reso il bug di oggi
-      evidente in cinque secondi. È la singola aggiunta con il miglior rapporto
-      valore/sforzo di questa lista.
 - [ ] **Nessun accesso ai log dalla UI**: per capire cosa è successo serve `journalctl`, cioè
       SSH, che è chiuso.
 - [ ] **Nessun test automatico.** Il bug di oggi sarebbe stato preso da un singolo test che fa

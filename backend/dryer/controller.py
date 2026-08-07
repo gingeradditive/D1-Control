@@ -80,6 +80,8 @@ class DryerController:
         # deadman heartbeat: aggiornato ad ogni iterazione del loop di controllo,
         # sorvegliato da ControlLoopWatchdog (backend/core/watchdog.py)
         self._last_loop_beat = time.monotonic()
+        # ultima lettura sensore valida, per /api/health
+        self._last_sensor_read = None
 
         # operating hours
         self.total_hours = self.config.get("total_operating_hours", 0.0, float)
@@ -162,6 +164,12 @@ class DryerController:
     def loop_heartbeat_age(self) -> float:
         return time.monotonic() - self._last_loop_beat
 
+    def sensor_reading_age(self) -> float:
+        """Secondi dall'ultima lettura sensore valida, o inf se non ancora avvenuta."""
+        if self._last_sensor_read is None:
+            return float("inf")
+        return time.monotonic() - self._last_sensor_read
+
     # --- start / stop ---
     def start(self):
         if self.sensor_fault:
@@ -234,6 +242,7 @@ class DryerController:
             self._temp_filter.append(temperature)
             filtered_temp = sum(self._temp_filter) / len(self._temp_filter)
 
+            self._last_sensor_read = time.monotonic()
             self.history.append((now, filtered_temp, self.ssr_heater, self.ssr_fan, self.valve_is_open))
             return now, filtered_temp
 
