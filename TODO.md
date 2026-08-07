@@ -14,8 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Nessun accesso ai log dalla UI**: per capire cosa è successo serve `journalctl`, cioè
-      SSH, che è chiuso.
 - [ ] **Nessun test automatico.** Il bug di oggi sarebbe stato preso da un singolo test che fa
       girare `background_loop` per 11 secondi e verifica che la history cresca. Partire da lì:
       `read_sensor` (validi/non validi/fault), `update_heater` (isteresi, valvola aperta),

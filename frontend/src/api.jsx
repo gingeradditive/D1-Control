@@ -46,6 +46,9 @@ export const api = {
   getStats: () => apiClient.get("/api/stats"),
   resetFilterHours: () => apiClient.post("/api/dryer/filter/reset"),
 
+  // --- Logs ---
+  getLogs: (lines = 200) => apiClient.get("/api/logs", { params: { lines } }),
+
   // --- Update ---
   getUpdateVersion: () => apiClient.get("/api/update/version"),
   getUpdateCheck: () => apiClient.get("/api/update/check"),

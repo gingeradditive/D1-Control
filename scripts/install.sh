@@ -363,6 +363,10 @@ service_runtime start pigpiod.service
 section "PERMESSI RETE"
 sudo usermod -aG netdev "$USERNAME"
 
+# Lettura journald senza sudo: usata da GET /api/logs per esporre i log del
+# servizio nella UI, dato che SSH è chiuso e journalctl da remoto non è raggiungibile.
+sudo usermod -aG systemd-journal "$USERNAME"
+
 sudo tee /etc/polkit-1/localauthority/50-local.d/10-nmcli.pkla > /dev/null <<EOF
 [Allow NetworkManager all permissions for user]
 Identity=unix-user:$USERNAME

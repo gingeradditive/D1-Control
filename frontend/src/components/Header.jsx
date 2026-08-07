@@ -11,10 +11,12 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
 import HistoryIcon from '@mui/icons-material/History';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import ArticleIcon from '@mui/icons-material/Article';
 import WifiDialog from './WifiDialog';
 import ChartDialog from './ChartDialog';
 import SettingsDialog from './SettingsDialog';
 import StatsDialog from './StatsDialog';
+import LogsDialog from './LogsDialog';
 
 import { api } from '../api'; // Assicurati che l'import sia corretto
 
@@ -94,6 +96,7 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
         <Box display="flex" alignItems="center">
           <IconButton onClick={handleOpen('chart')}><HistoryIcon /></IconButton>
           <IconButton onClick={handleOpen('stats')}><EqualizerIcon /></IconButton>
+          <IconButton onClick={handleOpen('logs')}><ArticleIcon /></IconButton>
           <IconButton onClick={handleOpen('settings')}><SettingsIcon /></IconButton>
         </Box>
       </Box>
@@ -123,6 +126,11 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
 
       <StatsDialog
         open={openModal === 'stats'}
+        onClose={handleClose}
+      />
+
+      <LogsDialog
+        open={openModal === 'logs'}
         onClose={handleClose}
       />
     </>

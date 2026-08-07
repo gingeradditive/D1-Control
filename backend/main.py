@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from threading import Thread
 import time
 
-from backend.api.routes import dryer, network, update, config, stats, presets, health
+from backend.api.routes import dryer, network, update, config, stats, presets, health, logs
 from backend.core.background import background_loop
 from backend.core.state import controllers
 from backend.core.watchdog import ControlLoopWatchdog, sd_notify
@@ -73,6 +73,7 @@ app.include_router(config.router, prefix="/api/config", tags=["Config"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Stats"])
 app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
 app.include_router(health.router, prefix="/api/health", tags=["Health"])
+app.include_router(logs.router, prefix="/api/logs", tags=["Logs"])
 
 # ---------------------------
 # 🚀 ENTRYPOINT (Uvicorn)
