@@ -16,8 +16,6 @@ Legenda priorità:
 
 ### Backend
 
-- [ ] **`except:` nudo** in [status.py](backend/network/status.py) — cattura anche
-      `KeyboardInterrupt`/`SystemExit`.
 - [ ] **`is_update_available()` fa `git fetch` sincrono**
       ([git_manager.py](backend/update/git_manager.py)): senza rete solleva → 500 all'apertura
       della UI. Va gestito come "non determinabile", non come errore.

@@ -27,7 +27,7 @@ def get_status() -> dict:
                     try:
                         level = int(line.split("level=")[1].split()[0].replace("dBm", ""))
                         strength = max(0, min(100, 2 * (level + 100)))
-                    except:
+                    except (IndexError, ValueError):
                         pass
 
             ip = "--.--.--.--"
