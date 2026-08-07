@@ -23,6 +23,13 @@ _FAULT_CLEAR_COUNT = 5
 
 _LOG_MAX_FILES = 30
 
+# "Riscalda ma non sale": se la termocoppia si sfila, l'SSR si guasta aperto o
+# la resistenza si brucia, il riscaldatore resta ON senza che la temperatura
+# salga. Controllo sulla derivata: riscaldatore ON per N minuti con ΔT < soglia.
+_HEAT_STALL_MINUTES = 10
+_HEAT_STALL_MIN_DELTA = 2.0  # °C attesi in finestra
+_HEAT_STALL_KEY = "Heating stalled: heater ON but temperature not rising"
+
 
 class DryerController:
     def __init__(self, config):
@@ -68,6 +75,9 @@ class DryerController:
 
         # registro errori limitato (TTL + tetto massimo): vedi backend/core/errors.py
         self.errors = ErrorRegistry()
+
+        # rilevamento "riscalda ma non sale": vedi _HEAT_STALL_* sotto
+        self._heat_stall_baseline = None
 
         # sensor fault tracking
         self.sensor_fault = False
@@ -204,6 +214,8 @@ class DryerController:
     def update_heater(self, temp):
         if not self.dryer_status:
             self.heater.off()
+            self._heat_stall_baseline = None
+            self.errors.pop(_HEAT_STALL_KEY, None)
             return
 
         now = time.monotonic()
@@ -231,6 +243,20 @@ class DryerController:
                     self.heater.on()
                     self.last_heater_toggle = now
                     print(f"Heater ON (temp: {temp:.1f}°C, target: {self.set_temp:.1f}°C)")
+
+        if self.heater.is_on():
+            if self._heat_stall_baseline is None:
+                self._heat_stall_baseline = (now, temp)
+            elif now - self._heat_stall_baseline[0] >= _HEAT_STALL_MINUTES * 60:
+                _, baseline_temp = self._heat_stall_baseline
+                if temp - baseline_temp < _HEAT_STALL_MIN_DELTA:
+                    self.errors.record(_HEAT_STALL_KEY, sticky=True)
+                else:
+                    self.errors.pop(_HEAT_STALL_KEY, None)
+                self._heat_stall_baseline = (now, temp)
+        else:
+            self._heat_stall_baseline = None
+            self.errors.pop(_HEAT_STALL_KEY, None)
 
     # --- logging ---
     def _open_log(self, date: datetime):

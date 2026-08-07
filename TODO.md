@@ -14,10 +14,6 @@ Legenda priorità:
 
 ## 🟡 Migliorie
 
-- [ ] **Nessun rilevamento "riscalda ma non sale".** Se la termocoppia si sfila dal blocco, se
-      l'SSR si guasta aperto o se la resistenza si brucia, il sistema resta acceso all'infinito
-      senza accorgersene. Aggiungere un check sulla derivata: riscaldatore ON per N minuti con
-      ΔT < soglia → errore.
 - [ ] **Nessun limite di sicurezza assoluto** indipendente dal setpoint: `SENSOR_TEMP_MAX` è a
       300 °C, cioè una soglia di guasto sensore, non un limite di processo. Aggiungere un
       cutoff duro (es. 90 °C) che spegne comunque.
