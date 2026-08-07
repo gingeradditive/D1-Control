@@ -227,6 +227,20 @@ MaxRetentionSec=7day
 EOF
 service_runtime restart systemd-journald || true
 
+# ─── Watchdog hardware ────────────────────────────────────────────────────────
+# Ultimo livello di protezione: se systemd stesso si blocca (freeze del kernel,
+# thrashing di memoria) il watchdog hardware del Pi riavvia la macchina, e al
+# boot il riscaldatore riparte spento.
+
+section "WATCHDOG HARDWARE"
+sudo mkdir -p /etc/systemd/system.conf.d
+sudo tee /etc/systemd/system.conf.d/watchdog.conf > /dev/null <<EOF
+[Manager]
+RuntimeWatchdogSec=15
+RebootWatchdogSec=2min
+EOF
+log "Watchdog hardware configurato (RuntimeWatchdogSec=15)"
+
 # ─── Servizi systemd ──────────────────────────────────────────────────────────
 
 section "SERVIZI SYSTEMD"
@@ -240,13 +254,20 @@ After=network.target pigpiod.service
 Wants=pigpiod.service
 
 [Service]
+Type=notify
+NotifyAccess=main
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR
 Environment=PYTHONUNBUFFERED=1
 ExecStart=$VENV/bin/python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level warning
 ExecStop=/bin/kill -SIGTERM \$MAINPID
 
-# Riavvio automatico: solo su crash, non su stop intenzionale
+# Deadman: il backend manda WATCHDOG=1 finché il loop di controllo gira.
+# Se il loop si blocca il ping si ferma e systemd riavvia il processo,
+# che rifà il setup GPIO con l'SSR del riscaldatore a LOW.
+WatchdogSec=30
+
+# Riavvio automatico: solo su crash (il kill da watchdog conta come crash)
 Restart=on-failure
 RestartSec=5
 StartLimitIntervalSec=120

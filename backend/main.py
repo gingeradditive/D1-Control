@@ -8,25 +8,36 @@ import time
 from backend.api.routes import dryer, network, update, config, stats, presets
 from backend.core.background import background_loop
 from backend.core.state import controllers
+from backend.core.watchdog import ControlLoopWatchdog, sd_notify
 
 # ---------------------------
 # ⚙️ BACKGROUND LOOP (dryer)
 # ---------------------------
 _running = True
 _thread = None
+_watchdog = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _thread, _running
+    global _thread, _running, _watchdog
     print("[Startup] Avvio ciclo di background del dryer...")
     _thread = Thread(target=background_loop, args=(controllers, lambda: _running))
     _thread.daemon = True
     _thread.start()
+
+    # Deadman sul loop: se si ferma, il riscaldatore va spento comunque.
+    _watchdog = ControlLoopWatchdog(controllers, lambda: _running)
+    _watchdog.start()
+
+    sd_notify("READY=1")
     yield
     print("[Shutdown] Arresto in corso...")
+    sd_notify("STOPPING=1")
     _running = False
     if _thread:
         _thread.join(timeout=3)
+    if _watchdog:
+        _watchdog.join(timeout=3)
     try:
         controllers["dryer"].shutdown()
     except Exception as e:

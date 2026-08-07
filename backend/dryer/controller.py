@@ -52,6 +52,10 @@ class DryerController:
         self.cooldown_active = False
         self.valve_last_switch_time = time.monotonic()
 
+        # deadman heartbeat: aggiornato ad ogni iterazione del loop di controllo,
+        # sorvegliato da ControlLoopWatchdog (backend/core/watchdog.py)
+        self._last_loop_beat = time.monotonic()
+
         # operating hours
         self.total_hours = self.config.get("total_operating_hours", 0.0, float)
         self.filter_hours = self.config.get("filter_operating_hours", 0.0, float)
@@ -80,6 +84,14 @@ class DryerController:
         # if NTP hasn't synced yet at boot time
         self.log_file = None
         self._log_date = None
+
+    # --- deadman heartbeat ---
+    def heartbeat(self):
+        """Segnala che il loop di controllo ha completato un'iterazione."""
+        self._last_loop_beat = time.monotonic()
+
+    def loop_heartbeat_age(self) -> float:
+        return time.monotonic() - self._last_loop_beat
 
     # --- start / stop ---
     def start(self):

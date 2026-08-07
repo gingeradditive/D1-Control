@@ -25,4 +25,9 @@ def background_loop(controllers, is_running):
                 dryer.heater.off()
             except Exception:
                 pass
+        finally:
+            # Il thread è vivo anche se l'iterazione è fallita: il battito serve
+            # a distinguere "loop bloccato" da "loop che sbaglia", e il secondo
+            # caso ha già spento il riscaldatore qui sopra.
+            dryer.heartbeat()
         time.sleep(1)
