@@ -40,3 +40,26 @@ def test_get_returns_default_for_missing_key(tmp_path):
     config = FileConfig(path=str(tmp_path / "config.json"))
 
     assert config.get("missing", 7, int) == 7
+
+
+def test_migrates_purge_and_cycle_from_seconds_to_minutes(tmp_path):
+    import json
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"purge_time": 60, "cycle_time": 3600}))
+
+    config = FileConfig(path=str(path))
+
+    assert config.get("purge_time", 0, int) == 1
+    assert config.get("cycle_time", 0, int) == 60
+    assert json.loads(path.read_text())["cycle_time"] == 60
+
+
+def test_keeps_purge_and_cycle_already_in_minutes(tmp_path):
+    import json
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"purge_time": 2, "cycle_time": 90}))
+
+    config = FileConfig(path=str(path))
+
+    assert config.get("purge_time", 0, int) == 2
+    assert config.get("cycle_time", 0, int) == 90

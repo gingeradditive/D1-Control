@@ -32,6 +32,10 @@ sniffio==1.3.1
 click==8.2.1
 
 # RPi hardware
-RPi.GPIO==0.7.1
-spidev==3.7
-pigpio==1.78
+# Su trixie (Python 3.13) non ci sono wheel di lgpio/spidev: si usano i
+# pacchetti apt python3-lgpio / python3-spidev, visibili perché il venv è
+# creato con --system-site-packages (scripts/install.sh). Su bookworm
+# (Python 3.11) arrivano da pip, così anche l'update dalla UI, che fa solo
+# `pip install -r requirements.txt`, porta le dipendenze giuste.
+lgpio==0.2.2.0; python_version < "3.13"
+spidev==3.7; python_version < "3.13"

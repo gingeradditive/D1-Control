@@ -1,5 +1,5 @@
 # Sottoinsieme di requirements.txt per CI e sviluppo desktop: esclude i
-# pacchetti hardware specifici del Raspberry Pi (RPi.GPIO, spidev, pigpio).
+# pacchetti hardware specifici del Raspberry Pi (lgpio, spidev).
 # Il codice li importa già in un try/except e ricade in modalità simulazione
 # quando mancano (vedi backend/dryer/components/*.py, backend/network/scanner.py);
 # su un runner non-ARM quei pacchetti non si builderebbero comunque.

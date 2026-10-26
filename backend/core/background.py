@@ -4,14 +4,27 @@ import traceback
 
 
 def background_loop(controllers, is_running):
+    # Il battito iniziale è preso alla costruzione del controller, all'import:
+    # se l'avvio di uvicorn è lento il watchdog vedrebbe un loop "fermo" prima
+    # ancora della prima iterazione e fermerebbe il dryer (cancellando anche
+    # l'avviso di riavvio imprevisto). Si riparte da adesso.
+    controllers["dryer"].heartbeat()
     while is_running():
         dryer = controllers["dryer"]
         try:
             dryer.update_fan_cooldown()
-            dryer.update_valve()
+            # La valvola non deve poter bloccare lettura sensore e riscaldatore:
+            # un errore qui (es. GPIO occupato) faceva fallire ogni iterazione,
+            # con temperatura congelata e riscaldatore spento a ciclo "acceso".
+            try:
+                dryer.update_valve()
+            except Exception as e:
+                print(f"[background_loop] Valve update failed: {e}", file=sys.stderr)
+                dryer.errors.record(f"Valve error: {e}")
             now, temperature = dryer.read_sensor()
             dryer.update_heater(temperature)
             dryer.periodic_save_hours()
+            dryer.update_power()
 
             if time.monotonic() - dryer.log_timer >= 10:
                 dryer.log_timer = time.monotonic()

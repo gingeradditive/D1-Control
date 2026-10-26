@@ -115,7 +115,7 @@ class ControlLoopWatchdog(threading.Thread):
         # Da qui in poi smettiamo di pingare systemd: se la situazione non si
         # risolve, il service manager riavvia il processo.
         try:
-            dryer.stop()
+            dryer.stop(reason=f"control loop stalled for {age:.0f}s")
         except Exception as e:
             print(f"[watchdog] stop() failed: {e}", file=sys.stderr)
 

@@ -1,0 +1,10 @@
+
+/* Screensaver attivo (di notte, per ore): Chromium gira con --disable-gpu e
+   ogni frame di animazione è rasterizzato in CPU, sia nell'overlay sia nella
+   schermata sottostante ancora montata. Le animazioni ferme abbassano carico
+   e assorbimento sulla 5V, già al limite su alcune macchine. */
+body.screensaver-active *,
+body.screensaver-active *::before,
+body.screensaver-active *::after {
+  animation-play-state: paused !important;
+}

@@ -6,12 +6,10 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-try:
-    import RPi.GPIO as GPIO
-    IS_RASPBERRY = True
-except (ImportError, NotImplementedError):
-    IS_RASPBERRY = False
-    logger.warning("RPi.GPIO not available, running in simulation mode.")
+from backend.core.platform import IS_RASPBERRY
+
+if not IS_RASPBERRY:
+    logger.warning("Not running on a Raspberry Pi, running in simulation mode.")
 
 # Il servizio dryer-backend gira con MemoryMax=400M: `npm install` e `npm run build`
 # lanciati come processi figli restano nello stesso cgroup e vengono uccisi dall'OOM

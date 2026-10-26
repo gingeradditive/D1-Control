@@ -19,7 +19,7 @@ USERNAME="pi"
 VENV="$PROJECT_DIR/venv"
 LOG_DIR="$PROJECT_DIR/logs"
 
-# Compatibilità Bullseye (/boot/config.txt) e Bookworm (/boot/firmware/config.txt)
+# Compatibilità Bullseye (/boot/config.txt) e Bookworm/Trixie (/boot/firmware/config.txt)
 if [ -f /boot/firmware/config.txt ]; then
     BOOT_CONFIG=/boot/firmware/config.txt
 else
@@ -129,8 +129,10 @@ sudo apt-get remove --purge -y nodejs npm node-* handlebars \
 sudo apt-get autoremove -y || true
 sudo apt-get autoclean
 
-log "Installo Node.js 20..."
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# Node 20 è a fine vita da aprile 2026. setup_22.x funziona anche su trixie
+# (suite "nodistro") e scarica ogni volta la chiave aggiornata del repository.
+log "Installo Node.js 22..."
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 log "Installo pacchetti kiosk..."
@@ -148,8 +150,17 @@ sudo apt-get install --no-install-recommends -y \
     git \
     curl \
     accountsservice \
-    pigpio \
+    python3-lgpio \
+    python3-spidev \
     nginx
+
+# pigpio (demone pigpiod) non esiste più su trixie: i GPIO passano da lgpio,
+# senza demoni (backend/dryer/components/gpio.py). Sulle installazioni
+# esistenti il demone viene fermato, non serve più.
+if systemctl list-unit-files pigpiod.service &>/dev/null; then
+    sudo systemctl disable pigpiod.service 2>/dev/null || true
+    service_runtime stop pigpiod.service || true
+fi
 
 # ─── LightDM — login automatico ───────────────────────────────────────────────
 
@@ -176,7 +187,10 @@ EOF
 
 section "PYTHON VENV"
 cd "$PROJECT_DIR"
-python3 -m venv "$VENV"
+# --system-site-packages: lgpio e spidev arrivano da apt (su Python 3.13 non
+# ci sono wheel su PyPI), vedi requirements.txt. Rieseguito su un venv già
+# esistente aggiorna solo pyvenv.cfg.
+python3 -m venv --system-site-packages "$VENV"
 source "$VENV/bin/activate"
 
 pip install --upgrade pip
@@ -224,8 +238,12 @@ chown "$USERNAME:$USERNAME" "$LOG_DIR" 2>/dev/null || true
 # ─── Journald — limite dimensione log su SD card ──────────────────────────────
 
 sudo mkdir -p /etc/systemd/journald.conf.d
+# Storage=persistent: Raspberry Pi OS imposta il journal volatile, e un reset
+# per calo di tensione cancellava proprio i log che servivano a diagnosticarlo.
+sudo mkdir -p /var/log/journal
 sudo tee /etc/systemd/journald.conf.d/size-limit.conf > /dev/null <<EOF
 [Journal]
+Storage=persistent
 SystemMaxUse=100M
 SystemKeepFree=200M
 MaxRetentionSec=7day
@@ -255,8 +273,7 @@ sudo tee /etc/systemd/system/dryer-backend.service > /dev/null <<EOF
 [Unit]
 Description=Dryer Backend (FastAPI)
 Documentation=https://github.com/gingeradditive/D1-Control
-After=network.target pigpiod.service
-Wants=pigpiod.service
+After=network.target
 
 [Service]
 Type=notify
@@ -352,12 +369,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable dryer-backend.service
 sudo systemctl enable dryer-frontend.service
 
-# ─── pigpiod ──────────────────────────────────────────────────────────────────
-
-section "PIGPIOD"
-sudo systemctl enable pigpiod.service
-service_runtime start pigpiod.service
-
 # ─── Permessi rete (NetworkManager / polkit) ──────────────────────────────────
 
 section "PERMESSI RETE"
@@ -367,14 +378,19 @@ sudo usermod -aG netdev "$USERNAME"
 # servizio nella UI, dato che SSH è chiuso e journalctl da remoto non è raggiungibile.
 sudo usermod -aG systemd-journal "$USERNAME"
 
-sudo tee /etc/polkit-1/localauthority/50-local.d/10-nmcli.pkla > /dev/null <<EOF
-[Allow NetworkManager all permissions for user]
-Identity=unix-user:$USERNAME
-Action=org.freedesktop.NetworkManager.*
-ResultAny=yes
-ResultInactive=yes
-ResultActive=yes
+# Regola JavaScript: i file .pkla (local authority) richiedono polkitd-pkla,
+# che non esiste su trixie; le regole .rules funzionano su bookworm e trixie.
+sudo mkdir -p /etc/polkit-1/rules.d
+sudo tee /etc/polkit-1/rules.d/10-nmcli.rules > /dev/null <<EOF
+// Gestione Wi-Fi dal backend del dryer (nmcli come $USERNAME)
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 &&
+        subject.user == "$USERNAME") {
+        return polkit.Result.YES;
+    }
+});
 EOF
+sudo rm -f /etc/polkit-1/localauthority/50-local.d/10-nmcli.pkla
 
 # ─── Hardware: SPI e I2C ──────────────────────────────────────────────────────
 
@@ -519,7 +535,6 @@ if [ "$IS_BUILD" = 0 ]; then
     log "Stato servizi:"
     sudo systemctl is-active dryer-backend.service  && log "  dryer-backend:  ATTIVO" || warn "  dryer-backend:  non attivo"
     sudo systemctl is-active dryer-frontend.service && log "  dryer-frontend: ATTIVO" || warn "  dryer-frontend: non attivo"
-    sudo systemctl is-active pigpiod.service        && log "  pigpiod:        ATTIVO" || warn "  pigpiod:        non attivo"
     sudo systemctl is-active nginx.service          && log "  nginx:          ATTIVO" || warn "  nginx:          non attivo"
 fi
 

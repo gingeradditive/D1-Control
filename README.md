@@ -66,8 +66,7 @@ Il progetto fornisce:
 ### Python
 Il backend usa le dipendenze definite in `requirements.txt`, tra cui:
 - `fastapi`, `uvicorn`, `httpx`
-- `RPi.GPIO`, `pigpio`, `spidev`
-- `adafruit-circuitpython-*`
+- `lgpio`, `spidev` (GPIO e SPI: da pip su bookworm, da apt su trixie con venv `--system-site-packages`)
 
 ### Frontend
 Il frontend React usa:
@@ -125,8 +124,9 @@ Lo script `scripts/install.sh` configura un sistema kiosk completo con:
 - build del frontend e servizio `serve`
 - servizi systemd: `dryer-backend.service`, `dryer-frontend.service`
 - nginx reverse proxy per frontend e API
-- abilitazione `pigpiod` e interfacce hardware SPI/I2C
-- permessi di rete tramite PolicyKit
+- interfacce hardware SPI/I2C (GPIO tramite lgpio, nessun demone)
+- permessi di rete tramite regola PolicyKit (`/etc/polkit-1/rules.d`)
+- journal persistente (`Storage=persistent`) per diagnosticare i riavvii imprevisti
 
 Per eseguire l'installazione:
 ```bash
@@ -149,9 +149,9 @@ bash scripts/install.sh
 - `POST /api/dryer/filter/reset`
 - `POST /api/dryer/filter/set/{hours}`
 - `GET /api/dryer/purge-time`
-- `POST /api/dryer/purge-time/{seconds}`
+- `POST /api/dryer/purge-time/{minutes}`
 - `GET /api/dryer/cycle-time`
-- `POST /api/dryer/cycle-time/{seconds}`
+- `POST /api/dryer/cycle-time/{minutes}`
 
 ### Network
 - `GET /api/network/`

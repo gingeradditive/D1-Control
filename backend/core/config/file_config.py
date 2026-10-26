@@ -50,7 +50,30 @@ class FileConfig:
         missing = {k: v for k, v in self.defaults.items() if k not in self._data}
         if missing:
             self._data.update(missing)
+        migrated = self._migrate_purge_units()
+        if missing or migrated:
             self._write(self._data)
+
+    # Un ciclo di purge più lungo di un giorno non ha senso: se cycle_time lo
+    # supera il file è ancora nel vecchio formato in secondi (60 / 3600), da
+    # prima del passaggio ai minuti. Lasciati così, il purge non partiva mai.
+    _MAX_CYCLE_MINUTES = 24 * 60
+
+    def _migrate_purge_units(self) -> bool:
+        try:
+            cycle = int(self._data.get("cycle_time", 0))
+            purge = int(self._data.get("purge_time", 0))
+        except (TypeError, ValueError):
+            return False
+        if cycle <= self._MAX_CYCLE_MINUTES:
+            return False
+        self._data["cycle_time"] = max(1, round(cycle / 60))
+        self._data["purge_time"] = max(1, round(purge / 60))
+        print(
+            f"[Config] purge/cycle time converted from seconds to minutes: "
+            f"{purge}/{cycle} s -> {self._data['purge_time']}/{self._data['cycle_time']} min"
+        )
+        return True
 
     def _read(self) -> dict[str, Any]:
         try:

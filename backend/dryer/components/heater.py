@@ -1,43 +1,33 @@
 # backend/dryer/components/heater.py
-import time
+from backend.dryer.components import gpio
 
-try:
-    import RPi.GPIO as GPIO
-    IS_RASPBERRY = True
-except (ImportError, NotImplementedError):
-    IS_RASPBERRY = False
-    print("[Heater] RPi.GPIO not available, running in simulation mode.")
+IS_RASPBERRY = gpio.available()
+if not IS_RASPBERRY:
+    print("[Heater] GPIO not available, running in simulation mode.")
 
 class Heater:
     def __init__(self, gpio_pin: int = 23):
         self.gpio_pin = gpio_pin
         self._is_on = False
         if IS_RASPBERRY:
-            GPIO.setup(self.gpio_pin, GPIO.OUT)
-            GPIO.output(self.gpio_pin, GPIO.LOW)
+            gpio.setup_output(self.gpio_pin, 0)
 
     def on(self):
         if IS_RASPBERRY:
-            # Defensive: re-force pin as OUTPUT in case it was reset
-            GPIO.setup(self.gpio_pin, GPIO.OUT)
-            # Clean edge: ensure LOW before going HIGH
-            GPIO.output(self.gpio_pin, GPIO.LOW)
-            time.sleep(0.005)
-            GPIO.output(self.gpio_pin, GPIO.HIGH)
+            gpio.write(self.gpio_pin, 1)
             # Verify pin state
-            state = GPIO.input(self.gpio_pin)
-            if not state:
+            if not gpio.read(self.gpio_pin):
                 print(f"[Heater] WARNING: GPIO {self.gpio_pin} read back LOW after setting HIGH!")
         self._is_on = True
 
     def off(self):
         if IS_RASPBERRY:
-            GPIO.setup(self.gpio_pin, GPIO.OUT)
-            GPIO.output(self.gpio_pin, GPIO.LOW)
+            gpio.write(self.gpio_pin, 0)
         self._is_on = False
 
     def is_on(self) -> bool:
         return self._is_on
 
     def cleanup(self):
-        pass
+        if IS_RASPBERRY:
+            gpio.release(self.gpio_pin)

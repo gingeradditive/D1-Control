@@ -9,8 +9,14 @@ const ScreensaverOverlay = ({ onExit, temperature, status }) => {
   return (
     <Portal>
       <Box
-        onClick={onExit}
-        onTouchStart={onExit}
+        // Solo onClick: chiudendo su touchstart l'overlay spariva prima del
+        // click sintetico, che finiva sul controllo sottostante (es. lo switch
+        // di accensione) spegnendo il dryer al risveglio dello schermo.
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onExit();
+        }}
         sx={{
           position: 'fixed',
           top: 0,

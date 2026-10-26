@@ -1,12 +1,10 @@
 import subprocess
 import time
 
-try:
-    import RPi.GPIO as GPIO
-    IS_RASPBERRY = True
-except (ImportError, NotImplementedError):
-    IS_RASPBERRY = False
-    print("[Network] RPi.GPIO not available, running in simulation mode.")
+from backend.core.platform import IS_RASPBERRY
+
+if not IS_RASPBERRY:
+    print("[Network] Not running on a Raspberry Pi, running in simulation mode.")
 
 
 def connect(ssid: str, password: str) -> bool:

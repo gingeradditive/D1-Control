@@ -275,10 +275,16 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
   // Event handler per interazione utente. Aggiorna sempre lo stato invece di
   // leggere isScreensaverActive da una closure che l'effect sotto non ricrea
   // quando lo screensaver si attiva: la condizione sarebbe rimasta stale.
+  // Non chiude lo screensaver: lo fa solo l'overlay al click, altrimenti il
+  // touchstart lo smonta e il click successivo arriva ai controlli sotto.
   const resetTimer = () => {
     lastInteractionTime.current = Date.now();
-    setIsScreensaverActive(false);
   };
+
+  // Animazioni in pausa con lo screensaver: vedi body.screensaver-active in index.css
+  useEffect(() => {
+    document.body.classList.toggle('screensaver-active', isKiosk && isScreensaverActive);
+  }, [isKiosk, isScreensaverActive]);
 
   // Gestione inattività
   useEffect(() => {
@@ -325,8 +331,10 @@ export default function StatusManager({ presetsVersion, pinnedPresetIds = [], on
       .catch(err => console.error("Errore nel fetch /status:", err));
   };
 
-  const handleStatusChange = () => {
-    api.setStatus(!status.status)
+  // Usa lo stato richiesto dallo switch, non l'inverso della copia locale:
+  // con uno stato non ancora aggiornato dal polling si mandava il comando opposto.
+  const handleStatusChange = (newStatus) => {
+    api.setStatus(newStatus)
       .then(res => {
         // niente update ottimistico: si applica lo stato reale riportato dal backend
         setStatus(prev => ({ ...prev, status: res.data?.running ?? prev.status }));

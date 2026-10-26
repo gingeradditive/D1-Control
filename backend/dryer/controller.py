@@ -11,7 +11,10 @@ from backend.dryer.components.heater import Heater
 from backend.dryer.components.fan import Fan
 from backend.dryer.components.valve import Valve
 from backend.dryer.components.sensors import Sensors
+from backend.dryer.components import gpio
 from backend.core.errors import ErrorRegistry
+from backend.core.platform import IS_RASPBERRY
+from backend.core.power import PowerMonitor, describe as describe_throttled
 
 # Sensor validity range — outside these bounds the reading is treated as a fault.
 # The MAX6675 returns 9999.0 on open-thermocouple; 0.0 on a shorted/disconnected probe.
@@ -39,7 +42,23 @@ _HEAT_STALL_MINUTES = 10
 _HEAT_STALL_MIN_DELTA = 2.0  # °C attesi in finestra
 _HEAT_STALL_KEY = "Heating stalled: heater ON but temperature not rising"
 
+# Su un Pi senza lgpio/spidev i componenti ricadono in simulazione: il dryer
+# sembrerebbe funzionare (temperatura simulata) senza mai scaldare davvero.
+_HW_UNAVAILABLE_KEY = "Hardware I/O unavailable — running in simulation mode, the dryer cannot heat"
+
 _UNEXPECTED_RESTART_KEY = "Previous drying cycle was interrupted by an unexpected restart"
+
+# Uno stop automatico (fault sensore, watchdog) deve restare visibile anche
+# quando la condizione che l'ha causato rientra: prima l'errore spariva da
+# solo e l'operatore trovava il dryer spento senza nessuna spiegazione.
+_AUTO_STOP_PREFIX = "Drying cycle stopped automatically"
+
+# Il CSV è scritto ogni 10 s ma resta in page cache: senza fsync un taglio di
+# corrente perde le ultime righe (e lascia byte NUL nel file), proprio quelle
+# che servono a capire cosa è successo.
+_LOG_FSYNC_INTERVAL = 60  # s
+
+_POWER_CHECK_INTERVAL = 10  # s
 
 
 class DryerController:
@@ -95,12 +114,24 @@ class DryerController:
         # registro errori limitato (TTL + tetto massimo): vedi backend/core/errors.py
         self.errors = ErrorRegistry()
 
+        # stato dell'alimentazione: vedi backend/core/power.py
+        self.power = PowerMonitor(self.errors)
+        self._power_check_timer = None
+        throttled = self.power.check()
+
         # "acceso" non persistente: se il processo precedente si è fermato
         # mentre il dryer era in funzione (crash, OOM, riavvio imprevisto),
         # avvisa l'operatore invece di ripartire spento in silenzio.
         if self.config.get("was_running", False, bool):
             self.errors.record(_UNEXPECTED_RESTART_KEY, sticky=True)
-            print("[DryerController] Previous session was interrupted by an unexpected restart.")
+            print(
+                "[DryerController] Previous session was interrupted by an unexpected restart"
+                + (f" — power state: {describe_throttled(throttled)}" if throttled is not None else "")
+                + "."
+            )
+
+        # chiave dell'avviso di stop automatico attivo, vedi _AUTO_STOP_PREFIX
+        self._auto_stop_key = None
 
         # rilevamento "riscalda ma non sale": vedi _HEAT_STALL_* sotto
         self._heat_stall_baseline = None
@@ -113,21 +144,23 @@ class DryerController:
         self._sensor_bad_streak  = 0
         self._sensor_good_streak = 0
 
-        # components — GPIO mode must be set once before any component setup
-        try:
-            import RPi.GPIO as GPIO
-            GPIO.setmode(GPIO.BCM)
-        except (ImportError, NotImplementedError):
-            pass
+        # components
+        if IS_RASPBERRY and not gpio.available():
+            self.errors.record(_HW_UNAVAILABLE_KEY, sticky=True)
+            print(f"[DryerController] {_HW_UNAVAILABLE_KEY}", file=sys.stderr)
         self.heater = Heater()
         self.fan = Fan()
-        self.valve = Valve()
+        self.valve = Valve(
+            open_angle=self.config.get("valve_open_angle", 10.0, float),
+            closed_angle=self.config.get("valve_closed_angle", 100.0, float),
+        )
         self.sensors = Sensors()
 
         # log file — created lazily on first log() call to avoid a wrong date
         # if NTP hasn't synced yet at boot time
         self.log_file = None
         self._log_date = None
+        self._log_last_fsync = time.monotonic()
 
         # ripopola la history in RAM dal CSV di oggi, cosi' i grafici non
         # ripartono vuoti ad ogni riavvio del servizio. Risoluzione più bassa
@@ -186,6 +219,7 @@ class DryerController:
             print("[DryerController] Start blocked: sensor fault active.", file=sys.stderr)
             return False
         self.errors.pop(_UNEXPECTED_RESTART_KEY, None)
+        self._clear_auto_stop()
         if not self.dryer_status:
             self.dryer_status = True
             self.cooldown_active = False
@@ -199,12 +233,21 @@ class DryerController:
             print("Dryer started.")
         return True
 
-    def stop(self):
+    def stop(self, reason: str = None):
+        """Ferma il ciclo. `reason` indica uno stop automatico (non chiesto
+        dall'operatore): lascia un avviso sticky fino al prossimo start/stop manuale."""
         # Va ripulito anche se dryer_status è già False: un riavvio spegne il
         # dryer senza passare da qui, e l'operatore deve poter riconoscere
         # l'avviso di riavvio imprevisto fermando esplicitamente il ciclo.
         self.config.set("was_running", False)
         self.errors.pop(_UNEXPECTED_RESTART_KEY, None)
+        if reason is None:
+            self._clear_auto_stop()
+        elif self.dryer_status:
+            self._clear_auto_stop()
+            self._auto_stop_key = f"{_AUTO_STOP_PREFIX}: {reason}"
+            self.errors.record(self._auto_stop_key, sticky=True)
+            print(f"[DryerController] {self._auto_stop_key}", file=sys.stderr)
         if self.dryer_status:
             self._accumulate_session_hours()
             self.dryer_status = False
@@ -214,6 +257,11 @@ class DryerController:
             self.cooldown_active = True
             self.valve.close()
             print("Fan cooldown started.")
+
+    def _clear_auto_stop(self):
+        if self._auto_stop_key is not None:
+            self.errors.pop(self._auto_stop_key, None)
+            self._auto_stop_key = None
 
     # --- properties ---
     @property
@@ -284,7 +332,7 @@ class DryerController:
             print(f"[DryerController] SENSOR FAULT: {fault_desc}", file=sys.stderr)
             if self.dryer_status:
                 print("[DryerController] Emergency stop triggered by sensor fault.", file=sys.stderr)
-                self.stop()
+                self.stop(reason=f"sensor fault ({fault_desc})")
 
         # Return last known good temperature so update_heater stays safe
         last_temp = self.history[-1][1] if self.history else self.set_temp
@@ -328,8 +376,9 @@ class DryerController:
                 self.last_heater_toggle = now
                 print(f"Heater OFF (pulse end, temp: {temp:.1f}°C)")
         else:
-            # turn on if below setpoint, pause elapsed, valve closed
-            if needs_heat and not self.valve.is_open():
+            # turn on if below setpoint, pause elapsed, valve closed and
+            # settled (servo e SSR insieme sommano i picchi sulla 5V)
+            if needs_heat and not self.valve.is_open() and not self.valve.is_settling():
                 if now - self.last_heater_toggle >= self.heater_off_duration:
                     self.heater.on()
                     self.last_heater_toggle = now
@@ -379,8 +428,20 @@ class DryerController:
         try:
             with open(self.log_file, "a") as f:
                 f.write(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')};{temperature:.2f};{int(self.heater.is_on())};{int(self.fan.is_on())};{self.set_temp:.2f};{int(self.valve.is_open())}\n")
+                if time.monotonic() - self._log_last_fsync >= _LOG_FSYNC_INTERVAL:
+                    f.flush()
+                    os.fsync(f.fileno())
+                    self._log_last_fsync = time.monotonic()
         except Exception as e:
             print(f"[DryerController] Log error: {e}")
+
+    # --- power supply ---
+    def update_power(self):
+        now = time.monotonic()
+        if self._power_check_timer is not None and now - self._power_check_timer < _POWER_CHECK_INTERVAL:
+            return
+        self._power_check_timer = now
+        self.power.check()
 
     # --- operating hours ---
     _MAX_ELAPSED_HOURS = 24.0  # sanity cap: a single accumulation can't exceed 24h
@@ -432,13 +493,8 @@ class DryerController:
             self.fan.off()
             self.valve.cleanup()
             self.fan.cleanup()
-            try:
-                import RPi.GPIO as GPIO
-                GPIO.output(self.heater.gpio_pin, GPIO.LOW)
-                GPIO.output(self.fan.gpio_pin, GPIO.LOW)
-                GPIO.cleanup()
-            except Exception:
-                pass
+            self.heater.cleanup()
+            gpio.cleanup()
         except Exception as e:
             print(f"[DryerController] Shutdown exception: {e}")
 
@@ -515,7 +571,7 @@ class DryerController:
         """Re-read the tunable parameters from config into the running instance.
 
         Used instead of rebuilding the controller on a config change: rebuilding
-        calls GPIO.cleanup() (leaving the SSRs undefined for a few ms) and drops
+        releases the GPIO lines (leaving the SSRs undefined for a few ms) and drops
         history and the in-progress session while the background thread is still
         holding the old instance.
         """

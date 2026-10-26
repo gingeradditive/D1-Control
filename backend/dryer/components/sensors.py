@@ -23,7 +23,10 @@ class Sensors:
             try:
                 self.spi = spidev.SpiDev()
                 self.spi.open(self.max6675_bus, self.max6675_device)
-                self.spi.max_speed_hz = 5000000
+                # MAX6675: clock massimo 4.3 MHz da datasheet. A 5 MHz (fuori
+                # specifica) e con i disturbi dell'SSR sui cavi della termocoppia
+                # le letture corrotte facevano scattare il fault sensore.
+                self.spi.max_speed_hz = 1000000
                 self.spi.mode = 0b00
             except Exception as e:
                 print(f"[Sensors] SPI init failed: {e}")
