@@ -4,11 +4,17 @@ import time
 from datetime import datetime
 from typing import Tuple
 
+from backend.core.platform import IS_RASPBERRY as _ON_RASPBERRY
+
+# Il solo successo dell'import non basta: su trixie python3-spidev arriva da
+# apt anche dove non c'è un Raspberry (container di test, CI arm64), e senza
+# SPI il sensore leggeva 9999 °C bloccando il dryer in sensor fault.
 try:
     import spidev
-    IS_RASPBERRY = True
+    IS_RASPBERRY = _ON_RASPBERRY
 except (ImportError, NotImplementedError):
     IS_RASPBERRY = False
+if not IS_RASPBERRY:
     print("[Sensors] Hardware libraries not available, running in simulation mode.")
 
 

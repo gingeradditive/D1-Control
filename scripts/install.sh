@@ -274,6 +274,9 @@ sudo tee /etc/systemd/system/dryer-backend.service > /dev/null <<EOF
 Description=Dryer Backend (FastAPI)
 Documentation=https://github.com/gingeradditive/D1-Control
 After=network.target
+# Limite di riavvii: va in [Unit], in [Service] systemd lo ignora
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
 Type=notify
@@ -292,8 +295,6 @@ WatchdogSec=30
 # Riavvio automatico: solo su crash (il kill da watchdog conta come crash)
 Restart=on-failure
 RestartSec=5
-StartLimitIntervalSec=120
-StartLimitBurst=5
 
 # Shutdown pulito
 TimeoutStartSec=60
@@ -326,6 +327,8 @@ sudo tee /etc/systemd/system/dryer-frontend.service > /dev/null <<EOF
 Description=Dryer Frontend (React static build)
 Documentation=https://github.com/gingeradditive/D1-Control
 After=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
 User=$USERNAME
@@ -336,8 +339,6 @@ ExecStop=/bin/kill -SIGTERM \$MAINPID
 # Riavvio automatico: solo su crash
 Restart=on-failure
 RestartSec=5
-StartLimitIntervalSec=120
-StartLimitBurst=5
 
 # Shutdown pulito
 TimeoutStartSec=30
