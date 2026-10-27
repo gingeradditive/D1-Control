@@ -6,6 +6,7 @@ import SignalWifi1BarIcon from '@mui/icons-material/SignalWifi1Bar';
 import SignalWifi2BarIcon from '@mui/icons-material/SignalWifi2Bar';
 import SignalWifi3BarIcon from '@mui/icons-material/SignalWifi3Bar';
 import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
+import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 
 import SettingsIcon from '@mui/icons-material/Settings';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
@@ -33,7 +34,8 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
     "connected": false,
     "ssid": "",
     "strength": 0,
-    "ip": "--.--.--.--"
+    "ip": "--.--.--.--",
+    "ethernet": { "connected": false, "ip": "--.--.--.--" }
   });
 
   const handleOpen = (modal) => () => {
@@ -50,8 +52,10 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
             "connected": false,
             "ssid": "",
             "strength": 0,
-            "ip": "--.--.--.--"
+            "ip": "--.--.--.--",
+            "ethernet": { "connected": false, "ip": "--.--.--.--" }
           });
+          return;
         }
 
         setNetwork(res.data);
@@ -61,11 +65,14 @@ export default function Header({ onPresetSaved, pinnedPresetIds, onPinnedChange 
 
   useEffect(() => {
     checkNetworkStatus(); // al mount
-    const interval = setInterval(checkNetworkStatus, 10 * 60 * 1000); // ogni 10 minuti
+    // ogni 30 s: collegando il cavo l'icona deve aggiornarsi in fretta
+    const interval = setInterval(checkNetworkStatus, 30 * 1000);
     return () => clearInterval(interval); // cleanup
   }, [checkNetworkStatus]);
 
   const getWifiIcon = (network) => {
+    // il cavo, se collegato, ha la precedenza: è la connessione usata
+    if (network?.ethernet?.connected) return <SettingsEthernetIcon />;
     if (!network?.connected) return <SignalWifiOffIcon />;
     const strength = network.strength;
 

@@ -11,6 +11,7 @@ import SignalWifi2Bar from '@mui/icons-material/SignalWifi2Bar';
 import SignalWifi3Bar from '@mui/icons-material/SignalWifi3Bar';
 import SignalWifi4Bar from '@mui/icons-material/SignalWifi4Bar';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 import { api } from '../api';
 import WifiConnectDialog from './WifiConnectDialog';
 
@@ -84,6 +85,23 @@ export default function WifiListDialog({ open, onClose }) {
         </DialogTitle>
 
         <DialogContent dividers>
+          {/* la riga del cavo compare solo a connessione attiva: senza cavo
+              non c'è nulla da configurare, quindi resta nascosta */}
+          {!loading && connectedNetwork?.ethernet?.connected && (
+            <List disablePadding>
+              <ListItem>
+                <ListItemIcon><SettingsEthernetIcon /></ListItemIcon>
+                <ListItemText
+                  primary="Ethernet"
+                  secondary={
+                    <Typography variant="caption" color="primary">
+                      Connected: {connectedNetwork.ethernet.ip}
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            </List>
+          )}
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" py={4}>
               <CircularProgress />
@@ -95,7 +113,7 @@ export default function WifiListDialog({ open, onClose }) {
           ) : (
             <List>
               {wifiList.map((network) => {
-                const isConnected = connectedNetwork?.ssid === network.ssid;
+                const isConnected = connectedNetwork?.connected && connectedNetwork?.ssid === network.ssid;
                 return (
                   <ListItem
                     key={network.ssid}

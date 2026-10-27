@@ -206,17 +206,16 @@ def test_unexpected_restart_warning_after_power_loss(tmp_path, monkeypatch):
 
 # --- alimentazione -----------------------------------------------------------
 
-def test_power_monitor_flags_undervoltage(dryer):
-    from backend.core.power import PowerMonitor, UNDERVOLTAGE_KEY
+def test_power_monitor_logs_without_ui_warning(dryer):
+    from backend.core.power import PowerMonitor
 
     readings = iter([0x0, 0x50005])
-    monitor = PowerMonitor(dryer.errors, reader=lambda: next(readings))
+    monitor = PowerMonitor(reader=lambda: next(readings))
 
-    monitor.check()
-    assert UNDERVOLTAGE_KEY not in dryer.errors.snapshot()
-
-    monitor.check()
-    assert UNDERVOLTAGE_KEY in dryer.errors.snapshot()
+    assert monitor.check() == 0x0
+    assert monitor.check() == 0x50005
+    # la sottotensione finisce solo nel journal, nessun banner a schermo
+    assert dryer.errors.snapshot() == {}
 
 
 # --- valvola -----------------------------------------------------------------

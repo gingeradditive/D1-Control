@@ -4,8 +4,10 @@
 Sul campo il ciclo si interrompeva perché la 5V scendeva sotto soglia (servo
 della valvola, commutazioni dell'SSR) e il Pi andava in reset: nessun log,
 journal volatile, dryer di nuovo spento al boot. Il firmware tiene traccia
-degli eventi di sottotensione in un registro di bit; qui lo leggiamo per
-rendere visibile il problema prima che diventi un reset.
+degli eventi di sottotensione in un registro di bit; qui lo leggiamo e ne
+logghiamo le variazioni nel journal. Volutamente niente avviso a schermo: il
+problema è noto e il banner allarmava gli operatori senza dar loro modo di
+intervenire.
 
 Bit del registro (vedi `vcgencmd get_throttled`):
     0x1      sottotensione in corso
@@ -20,8 +22,6 @@ UNDERVOLTAGE_NOW = 0x1
 THROTTLED_NOW = 0x4
 UNDERVOLTAGE_OCCURRED = 0x10000
 THROTTLED_OCCURRED = 0x40000
-
-UNDERVOLTAGE_KEY = "Power supply under-voltage detected — check the 5V supply (risk of unexpected restarts)"
 
 _SYSFS_PATH = "/sys/devices/platform/soc/soc:firmware/get_throttled"
 
@@ -57,10 +57,9 @@ def describe(value: int) -> str:
 
 
 class PowerMonitor:
-    """Logga le variazioni del registro e segnala la sottotensione nel registro errori."""
+    """Logga le variazioni del registro."""
 
-    def __init__(self, errors, reader=read_throttled):
-        self.errors = errors
+    def __init__(self, reader=read_throttled):
         self._reader = reader
         self._last = None
 
@@ -70,8 +69,4 @@ class PowerMonitor:
             return value
         print(f"[Power] Throttling state changed: {describe(value)}")
         self._last = value
-        # il bit "dal boot" non si azzera fino al riavvio: l'avviso resta
-        # finché la macchina non riparte con un'alimentazione adeguata
-        if value & (UNDERVOLTAGE_NOW | UNDERVOLTAGE_OCCURRED):
-            self.errors.record(UNDERVOLTAGE_KEY, sticky=True)
         return value

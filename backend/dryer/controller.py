@@ -115,7 +115,7 @@ class DryerController:
         self.errors = ErrorRegistry()
 
         # stato dell'alimentazione: vedi backend/core/power.py
-        self.power = PowerMonitor(self.errors)
+        self.power = PowerMonitor()
         self._power_check_timer = None
         throttled = self.power.check()
 
